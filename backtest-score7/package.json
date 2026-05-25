@@ -1,0 +1,10 @@
+{
+  "name": "uoa-score7-backtest",
+  "version": "1.0.0",
+  "description": "UOA Score 7+ Backtest Dashboard — Port 3213",
+  "type": "commonjs",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js"
+  }
+}

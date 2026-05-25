@@ -5,43 +5,96 @@
 import { evaluate, evaluateAsync, getClient } from '../connection.js';
 
 export async function get() {
-  // Try internal API first — reads from the active watchlist widget
-  const symbols = await evaluate(`
-    (function() {
-      // Method 1: Try the watchlist widget's internal data
-      try {
-        var rightArea = document.querySelector('[class*="layout__area--right"]');
-        if (!rightArea || rightArea.offsetWidth < 50) return { symbols: [], source: 'panel_closed' };
-      } catch(e) {}
+  // Helper: collect all visible data-symbol-full elements
+  async function scrapeVisible() {
+    return await evaluate(`
+      (function() {
+        var els = document.querySelectorAll('[data-symbol-full]');
+        var syms = [];
+        for (var i = 0; i < els.length; i++) {
+          var s = els[i].getAttribute('data-symbol-full');
+          if (s) syms.push(s);
+        }
+        return syms;
+      })()
+    `);
+  }
 
-      // Method 2: Read data-symbol-full attributes from watchlist rows
-      var results = [];
-      var seen = {};
+  // Helper: scroll the watchlist container to a given scrollTop
+  async function scrollTo(pos) {
+    return await evaluate(`
+      (function() {
+        var container = document.querySelector('[class*="layout__area--right"]');
+        if (!container) return false;
+        var best = null, bestSH = 0;
+        var all = container.querySelectorAll('*');
+        for (var i = 0; i < all.length; i++) {
+          var el = all[i];
+          if (el.scrollHeight > el.clientHeight + 100 && el.scrollHeight > bestSH) {
+            best = el; bestSH = el.scrollHeight;
+          }
+        }
+        if (!best) return false;
+        best.scrollTop = ${pos};
+        return { scrollHeight: best.scrollHeight, clientHeight: best.clientHeight };
+      })()
+    `);
+  }
+
+  const seen = new Set();
+  const allSymbols = [];
+
+  const ROW_H      = 40;   // TradingView watchlist row height
+  const STEP_DELAY = 160;  // ms between steps
+
+  // ── Step 1: Scrape at top ──────────────────────────────────────────────────
+  await scrollTo(0);
+  await new Promise(r => setTimeout(r, 400));
+  (await scrapeVisible() || []).forEach(s => {
+    if (!seen.has(s)) { seen.add(s); allSymbols.push(s); }
+  });
+
+  // ── Step 2: Scroll to absolute bottom, get the actual maxScroll ────────────
+  const bottomInfo = await scrollTo(999999);
+  await new Promise(r => setTimeout(r, 400));
+  (await scrapeVisible() || []).forEach(s => {
+    if (!seen.has(s)) { seen.add(s); allSymbols.push(s); }
+  });
+
+  // Determine true maxScroll from the bottom position
+  const trueMax = bottomInfo?.scrollHeight && bottomInfo?.clientHeight
+    ? bottomInfo.scrollHeight - bottomInfo.clientHeight
+    : 2400;   // safe fallback for ~60-item watchlist
+
+  // ── Step 3: Sweep from bottom back to top in 40px steps ───────────────────
+  for (let pos = trueMax; pos >= 0; pos -= ROW_H) {
+    await scrollTo(pos);
+    await new Promise(r => setTimeout(r, STEP_DELAY));
+    (await scrapeVisible() || []).forEach(s => {
+      if (!seen.has(s)) { seen.add(s); allSymbols.push(s); }
+    });
+  }
+
+  // ── Restore scroll to top ──────────────────────────────────────────────────
+  await scrollTo(0);
+  await new Promise(r => setTimeout(r, 200));
+
+  if (allSymbols.length > 0) {
+    return {
+      success: true,
+      count:   allSymbols.length,
+      source:  'scroll_scrape',
+      symbols: allSymbols.map(sym => ({ symbol: sym, last: null, change: null, change_percent: null })),
+    };
+  }
+
+  // Fallback: static text scan
+  const fallback = await evaluate(`
+    (function() {
+      var results = [], seen = {};
       var container = document.querySelector('[class*="layout__area--right"]');
       if (!container) return { symbols: [], source: 'no_container' };
-
-      // Find all elements with symbol data attributes
-      var symbolEls = container.querySelectorAll('[data-symbol-full]');
-      for (var i = 0; i < symbolEls.length; i++) {
-        var sym = symbolEls[i].getAttribute('data-symbol-full');
-        if (!sym || seen[sym]) continue;
-        seen[sym] = true;
-
-        // Find the row and extract price data
-        var row = symbolEls[i].closest('[class*="row"]') || symbolEls[i].parentElement;
-        var cells = row ? row.querySelectorAll('[class*="cell"], [class*="column"]') : [];
-        var nums = [];
-        for (var j = 0; j < cells.length; j++) {
-          var t = cells[j].textContent.trim();
-          if (t && /^[\\-+]?[\\d,]+\\.?\\d*%?$/.test(t.replace(/[\\s,]/g, ''))) nums.push(t);
-        }
-        results.push({ symbol: sym, last: nums[0] || null, change: nums[1] || null, change_percent: nums[2] || null });
-      }
-
-      if (results.length > 0) return { symbols: results, source: 'data_attributes' };
-
-      // Method 3: Scan for ticker-like text in the right panel
-      var items = container.querySelectorAll('[class*="symbolName"], [class*="tickerName"], [class*="symbol-"]');
+      var items = container.querySelectorAll('[class*="symbolName"],[class*="tickerName"],[class*="symbol-"]');
       for (var k = 0; k < items.length; k++) {
         var text = items[k].textContent.trim();
         if (text && /^[A-Z][A-Z0-9.:!]{0,20}$/.test(text) && !seen[text]) {
@@ -49,16 +102,15 @@ export async function get() {
           results.push({ symbol: text, last: null, change: null, change_percent: null });
         }
       }
-
-      return { symbols: results, source: results.length > 0 ? 'text_scan' : 'empty' };
+      return { symbols: results, source: 'text_scan' };
     })()
   `);
 
   return {
     success: true,
-    count: symbols?.symbols?.length || 0,
-    source: symbols?.source || 'unknown',
-    symbols: symbols?.symbols || [],
+    count:   fallback?.symbols?.length || 0,
+    source:  fallback?.source || 'unknown',
+    symbols: fallback?.symbols || [],
   };
 }
 

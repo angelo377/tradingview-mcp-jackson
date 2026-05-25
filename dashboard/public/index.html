@@ -1,0 +1,295 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>📈 TV Automation Dashboard</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+
+  <!-- ── HEADER ─────────────────────────────────────────────────────────── -->
+  <header>
+    <div class="header-left">
+      <span class="logo">📈 TV Automation</span>
+      <span class="subtitle">Angelo · UOA Watchlist</span>
+    </div>
+    <div class="header-right">
+      <div id="ws-status" class="badge badge-grey">
+        <span class="badge-dot"></span> Connecting…
+      </div>
+      <div id="tv-status" class="badge badge-grey" title="TradingView Desktop connection">
+        📺 TV: checking…
+      </div>
+      <span id="clock" class="clock">--:--:--</span>
+    </div>
+  </header>
+
+  <!-- ── BIG COMMAND BUTTONS ─────────────────────────────────────────────── -->
+  <nav class="cmdbar">
+    <button class="cmd-btn" data-cmd="tv_cycle" data-color="blue">
+      <span class="cmd-icon">🔄</span>
+      <span class="cmd-label">Cycle Scan</span>
+      <span class="cmd-sub">Find cycle lows &amp; next windows</span>
+      <span class="cmd-spinner hidden">⏳</span>
+    </button>
+    <button class="cmd-btn" data-cmd="tv_health_check" data-color="green">
+      <span class="cmd-icon">🏥</span>
+      <span class="cmd-label">Health Check</span>
+      <span class="cmd-sub">Market structure &amp; POI levels</span>
+      <span class="cmd-spinner hidden">⏳</span>
+    </button>
+    <button class="cmd-btn" data-cmd="tv_earnings" data-color="orange">
+      <span class="cmd-icon">📅</span>
+      <span class="cmd-label">Earnings</span>
+      <span class="cmd-sub">Upcoming earnings dates</span>
+      <span class="cmd-spinner hidden">⏳</span>
+    </button>
+    <button class="cmd-btn" data-cmd="tv_panel" data-color="purple">
+      <span class="cmd-icon">📊</span>
+      <span class="cmd-label">Refresh Panel</span>
+      <span class="cmd-sub">Re-draw overlay on chart</span>
+      <span class="cmd-spinner hidden">⏳</span>
+    </button>
+  </nav>
+
+  <!-- ── MAIN CONTENT ───────────────────────────────────────────────────── -->
+  <main>
+    <!-- LEFT: Tabs + Results -->
+    <section class="results-pane">
+
+      <!-- Offline banner -->
+      <div id="offline-banner">
+        <span id="offline-msg">⚠️ TradingView is not open — launching automatically…</span>
+        <button id="launch-tv-btn" onclick="launchTradingView()" class="launch-btn">
+          🚀 Launch TradingView
+        </button>
+      </div>
+
+      <!-- ── SCAN PROGRESS BAR ──────────────────────────────────────────────── -->
+      <div id="scan-progress" class="scan-progress hidden">
+        <div class="progress-top">
+          <span id="progress-label" class="progress-label">Scanning…</span>
+          <span id="progress-ticker-now" class="progress-ticker-now">—</span>
+          <span id="progress-count" class="progress-count">0 / 55</span>
+        </div>
+        <div class="progress-track">
+          <div id="progress-fill" class="progress-fill"></div>
+        </div>
+        <div id="progress-chips" class="progress-chips"></div>
+      </div>
+
+      <!-- Tabs -->
+      <div class="tabs">
+        <button class="tab active" data-tab="watchlist">📋 Watchlist</button>
+        <button class="tab" data-tab="log">📡 Live Log</button>
+        <button class="tab" data-tab="health">🏥 Health</button>
+        <button class="tab" data-tab="cycle">🔄 Cycle Dates</button>
+        <button class="tab" data-tab="earnings">📅 Earnings</button>
+      </div>
+
+      <!-- ── WATCHLIST TAB ───────────────────────────────────────────────── -->
+      <div id="tab-watchlist" class="tab-content active">
+        <div class="tab-header">
+          <span id="wl-ts" class="ts-label">Your Watchlist</span>
+          <button class="icon-btn" onclick="refreshWatchlistLive()">↺ Refresh</button>
+        </div>
+        <div id="wl-stats" class="stat-row"></div>
+        <div class="table-wrap">
+          <table id="wl-table" class="data-table">
+            <thead>
+              <tr>
+                <th>Signal Date</th>
+                <th>Ticker</th>
+                <th>Days on List</th>
+                <th>Earnings Date</th>
+                <th>Days Away</th>
+              </tr>
+            </thead>
+            <tbody id="wl-tbody">
+              <tr><td colspan="5" style="text-align:center;padding:40px;color:#4a5068;font-size:16px">
+                Loading watchlist…
+              </td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- ── LOG TAB ────────────────────────────────────────────────────── -->
+      <div id="tab-log" class="tab-content">
+        <div class="tab-header">
+          <span class="ts-label">📡 Live output — updates in real time when scans run</span>
+          <button class="icon-btn" onclick="clearLog()">🗑 Clear</button>
+        </div>
+        <pre id="log-output" class="log-box">Waiting for a scan to run…</pre>
+      </div>
+
+      <!-- ── HEALTH TAB ─────────────────────────────────────────────────── -->
+      <div id="tab-health" class="tab-content">
+        <div class="tab-header">
+          <span id="health-ts" class="ts-label">No scan yet — click 🏥 Health Check to start</span>
+          <button class="icon-btn" onclick="loadHealthCache()">↺ Load Last Scan</button>
+        </div>
+        <div id="health-stats" class="stat-row"></div>
+        <div class="filter-bar" id="health-filter-bar" style="display:none">
+          <button class="filter-btn active" data-filter="all">All</button>
+          <button class="filter-btn" data-filter="bull">🟢 Bullish</button>
+          <button class="filter-btn" data-filter="bear">🔴 Bearish</button>
+          <button class="filter-btn" data-filter="poi">🎯 POI Touch</button>
+          <button class="filter-btn" data-filter="hipri">⚡ High Priority</button>
+          <button class="filter-btn" data-filter="sos">🟩 SOS</button>
+          <button class="filter-btn" data-filter="sow">🟥 SOW</button>
+          <button class="filter-btn" data-filter="ambuy">🟢 AM Buy</button>
+          <button class="filter-btn" data-filter="amsell">🔴 AM Sell</button>
+          <input id="health-search" type="text" class="search-input" placeholder="🔍 Search ticker…" />
+        </div>
+        <div class="table-wrap">
+          <table id="health-table" class="data-table">
+            <thead>
+              <tr>
+                <th>Ticker</th>
+                <th>Price</th>
+                <th>Market Structure</th>
+                <th>SOS / SOW</th>
+                <th>AM Signal</th>
+                <th>POI Touch</th>
+                <th>Fib 0.50</th>
+                <th>Earnings Date</th>
+              </tr>
+            </thead>
+            <tbody id="health-tbody">
+              <tr><td colspan="6" style="text-align:center;padding:40px;color:#4a5068;font-size:16px">
+                Click <strong style="color:#22c55e">🏥 Health Check</strong> to load fresh data
+              </td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- ── CYCLE TAB ──────────────────────────────────────────────────── -->
+      <div id="tab-cycle" class="tab-content">
+        <div class="tab-header">
+          <span id="cycle-ts" class="ts-label">No scan yet — click 🔄 Cycle Scan to start</span>
+          <button class="icon-btn" onclick="loadCycleCache()">↺ Load Last Scan</button>
+        </div>
+        <div id="cycle-stats" class="stat-row"></div>
+        <div class="filter-bar" id="cycle-filter-bar" style="display:none">
+          <button class="filter-btn active" data-filter="all">All</button>
+          <button class="filter-btn" data-filter="inDailyWin">🟢 In Daily Window</button>
+          <button class="filter-btn" data-filter="inWeeklyWin">🔵 In Weekly Window</button>
+          <button class="filter-btn" data-filter="soon">🟡 Next &lt; 14 Days</button>
+          <button class="filter-btn" data-filter="nodata">❌ No Data</button>
+          <input id="cycle-search" type="text" class="search-input" placeholder="🔍 Search ticker…" />
+        </div>
+        <div class="table-wrap">
+          <table id="cycle-table" class="data-table">
+            <thead>
+              <tr>
+                <th>Ticker</th>
+                <th>Price</th>
+                <th>Last Daily Low</th>
+                <th>Last Weekly Low</th>
+                <th>Next Daily Window</th>
+                <th>Days Away</th>
+                <th>Next Weekly Window</th>
+                <th>Days Away</th>
+              </tr>
+            </thead>
+            <tbody id="cycle-tbody">
+              <tr><td colspan="8" style="text-align:center;padding:40px;color:#4a5068;font-size:16px">
+                Click <strong style="color:#3b82f6">🔄 Cycle Scan</strong> to load fresh data
+              </td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- ── EARNINGS TAB ──────────────────────────────────────────────── -->
+      <div id="tab-earnings" class="tab-content">
+        <div class="tab-header">
+          <span id="earn-ts" class="ts-label">No earnings data — click 📅 Earnings to refresh</span>
+          <button class="icon-btn" onclick="loadEarningsCache()">↺ Load Last</button>
+        </div>
+        <div id="earn-stats" class="stat-row"></div>
+        <div class="table-wrap">
+          <table id="earn-table" class="data-table">
+            <thead>
+              <tr>
+                <th>Ticker</th>
+                <th>Signal Date</th>
+                <th>Earnings Date</th>
+                <th>Days Away</th>
+              </tr>
+            </thead>
+            <tbody id="earn-tbody">
+              <tr><td colspan="4" style="text-align:center;padding:40px;color:#4a5068;font-size:16px">
+                Click <strong style="color:#f97316">📅 Earnings</strong> to load earnings data
+              </td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
+    <!-- RIGHT: Sidebar summary -->
+    <aside class="sidebar">
+      <div class="sidebar-card">
+        <div class="sidebar-title sidebar-toggle-btn">
+          <span>🔥 High Priority <span id="sidebar-hipri-count" class="sidebar-count"></span></span>
+          <span class="sidebar-arrow">▼</span>
+        </div>
+        <div id="sidebar-hipri" class="sidebar-col sidebar-body">
+          <span style="color:#4a5068;font-size:12px">Run Health Check to see data</span>
+        </div>
+      </div>
+      <div class="sidebar-card">
+        <div class="sidebar-title sidebar-toggle-btn">
+          <span>〰️ Golden Zone <span id="sidebar-fib-count" class="sidebar-count"></span></span>
+          <span class="sidebar-arrow">▼</span>
+        </div>
+        <div id="sidebar-fib" class="sidebar-col sidebar-body">
+          <span style="color:#4a5068;font-size:12px">Run Health Check to see data</span>
+        </div>
+      </div>
+      <div class="sidebar-card">
+        <div class="sidebar-title sidebar-toggle-btn">
+          <span>📈 Bullish Structure <span id="sidebar-bullish-count" class="sidebar-count"></span></span>
+          <span class="sidebar-arrow">▼</span>
+        </div>
+        <div id="sidebar-bullish" class="sidebar-col sidebar-body">
+          <span style="color:#4a5068;font-size:12px">Run Health Check to see data</span>
+        </div>
+      </div>
+      <div class="sidebar-card">
+        <div class="sidebar-title sidebar-toggle-btn">
+          <span>📅 Earnings <span id="sidebar-earnings-count" class="sidebar-count"></span></span>
+          <span class="sidebar-arrow">▼</span>
+        </div>
+        <div id="sidebar-earnings" class="sidebar-col sidebar-body">
+          <span style="color:#4a5068;font-size:12px">—</span>
+        </div>
+      </div>
+      <div class="sidebar-card">
+        <div class="sidebar-title sidebar-toggle-btn">
+          <span>🟢 In Daily Cycle Low <span id="sidebar-daily-count" class="sidebar-count"></span></span>
+          <span class="sidebar-arrow">▼</span>
+        </div>
+        <div id="sidebar-daily-win" class="sidebar-col sidebar-body">
+          <span style="color:#4a5068;font-size:12px">—</span>
+        </div>
+      </div>
+      <div class="sidebar-card">
+        <div class="sidebar-title sidebar-toggle-btn">
+          <span>🔵 In Weekly Cycle Low <span id="sidebar-weekly-count" class="sidebar-count"></span></span>
+          <span class="sidebar-arrow">▼</span>
+        </div>
+        <div id="sidebar-weekly-win" class="sidebar-col sidebar-body">
+          <span style="color:#4a5068;font-size:12px">—</span>
+        </div>
+      </div>
+    </aside>
+  </main>
+
+  <script src="app.js"></script>
+</body>
+</html>

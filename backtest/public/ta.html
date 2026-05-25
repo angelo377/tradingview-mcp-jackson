@@ -1,0 +1,496 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1"/>
+  <title>🎯 TA-Enhanced Backtest Results</title>
+  <link rel="stylesheet" href="style.css"/>
+  <style>
+    body { padding: 20px; }
+    .page-header {
+      background: linear-gradient(135deg, #0a1628 0%, #0d1f3c 100%);
+      border: 1px solid rgba(0,212,168,0.3);
+      border-radius: 12px;
+      padding: 20px 28px;
+      margin-bottom: 28px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+    .page-header h1 { font-size: 22px; font-weight: 800; color: #00d4a8; margin: 0; }
+    .page-header p  { font-size: 13px; color: #aaa; margin: 4px 0 0; }
+    .back-btn {
+      background: rgba(79,140,255,0.15);
+      border: 1px solid rgba(79,140,255,0.3);
+      color: #4f8cff;
+      padding: 8px 16px;
+      border-radius: 8px;
+      cursor: pointer;
+      font-size: 13px;
+      text-decoration: none;
+    }
+    .back-btn:hover { background: rgba(79,140,255,0.25); }
+
+    /* Score comparison table */
+    .comparison-table { width: 100%; border-collapse: collapse; margin-bottom: 28px; }
+    .comparison-table th {
+      background: rgba(255,255,255,0.05); color: #aaa;
+      padding: 10px 14px; font-size: 11px; text-transform: uppercase;
+      letter-spacing: 0.5px; text-align: left; border-bottom: 1px solid rgba(255,255,255,0.07);
+    }
+    .comparison-table td { padding: 12px 14px; font-size: 13px; border-bottom: 1px solid rgba(255,255,255,0.05); }
+    .comparison-table tr:hover td { background: rgba(255,255,255,0.03); }
+    .tier-s8  td { border-left: 3px solid #4caf50; }
+    .tier-s10 td { border-left: 3px solid #00d4a8; }
+    .tier-s12 td { border-left: 3px solid #ff9800; }
+
+    /* Year separator rows */
+    .year-sep td {
+      background: linear-gradient(90deg,rgba(30,40,70,0.95),rgba(20,28,55,0.95));
+      border-top: 2px solid rgba(79,140,255,0.35);
+      border-bottom: 1px solid rgba(79,140,255,0.2);
+      padding: 8px 14px;
+    }
+
+    /* Stat cards row */
+    .stat-row { display: flex; gap: 12px; flex-wrap: wrap; margin-bottom: 24px; }
+    .stat-card {
+      flex: 1; min-width: 110px;
+      background: var(--card-bg);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 14px 16px;
+      text-align: center;
+    }
+    .stat-card .val { font-size: 22px; font-weight: 800; color: #fff; }
+    .stat-card .lbl { font-size: 10px; text-transform: uppercase; letter-spacing: 0.5px; color: #888; margin-top: 4px; }
+    .stat-card .val.pos { color: #4caf50; }
+    .stat-card .val.neg { color: #f44336; }
+
+    /* Charts row */
+    .charts-row { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-bottom: 28px; }
+    .chart-box { background: var(--card-bg); border: 1px solid var(--border); border-radius: 12px; padding: 18px; }
+    .chart-box h4 { font-size: 12px; text-transform: uppercase; letter-spacing: 0.5px; color: #888; margin: 0 0 14px; }
+
+    /* Trade table */
+    .trade-table { width: 100%; border-collapse: collapse; font-size: 12px; }
+    .trade-table th {
+      background: rgba(255,255,255,0.05); color: #999;
+      padding: 9px 10px; font-size: 10px; text-transform: uppercase;
+      letter-spacing: 0.4px; text-align: left; border-bottom: 1px solid rgba(255,255,255,0.07);
+      white-space: nowrap;
+    }
+    .trade-table td { padding: 8px 10px; border-bottom: 1px solid rgba(255,255,255,0.04); white-space: nowrap; }
+    .trade-table tr:hover td { background: rgba(255,255,255,0.03); }
+    .ticker-cell { color: #4f8cff; font-weight: 700; cursor: pointer; }
+    .pos { color: #4caf50; } .neg { color: #f44336; }
+    .outcome-pill { padding: 3px 9px; border-radius: 20px; font-size: 10px; font-weight: 600; white-space: nowrap; }
+    .pill-win     { background: rgba(76,175,80,0.2);  color: #4caf50; border: 1px solid rgba(76,175,80,0.3); }
+    .pill-loss    { background: rgba(244,67,54,0.15); color: #f44336; border: 1px solid rgba(244,67,54,0.25); }
+    .pill-be      { background: rgba(100,100,100,0.2); color: #aaa;   border: 1px solid rgba(150,150,150,0.2); }
+    .pill-noentry { background: rgba(100,100,100,0.12); color: #777;  border: 1px solid rgba(100,100,100,0.2); }
+
+    /* Section card */
+    .section-card {
+      background: var(--card-bg);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 20px;
+      margin-bottom: 24px;
+    }
+    .section-card h3 {
+      font-size: 13px; text-transform: uppercase; letter-spacing: 0.5px;
+      color: #888; margin: 0 0 16px; display: flex; align-items: center; gap: 8px;
+    }
+
+    /* Year breakdown cards */
+    .year-cards { display: flex; gap: 16px; flex-wrap: wrap; margin-bottom: 24px; }
+    .year-card {
+      flex: 1; min-width: 180px;
+      background: var(--card-bg); border: 1px solid var(--border);
+      border-radius: 10px; padding: 16px;
+    }
+    .year-card .yr-title { font-size: 15px; font-weight: 800; color: #4f8cff; margin-bottom: 6px; }
+    .year-card .yr-pnl   { font-size: 20px; font-weight: 800; margin-bottom: 4px; }
+    .year-card .yr-meta  { font-size: 12px; color: #aaa; line-height: 1.6; }
+
+    /* Outcome filter tabs */
+    .outcome-tabs { display: flex; gap: 8px; margin-bottom: 16px; flex-wrap: wrap; }
+    .outcome-tab {
+      padding: 6px 14px; border-radius: 20px; font-size: 12px; font-weight: 600;
+      cursor: pointer; border: 1px solid rgba(255,255,255,0.1);
+      background: rgba(255,255,255,0.05); color: #aaa; transition: all .15s;
+    }
+    .outcome-tab.active, .outcome-tab:hover {
+      background: rgba(79,140,255,0.2); border-color: rgba(79,140,255,0.4); color: #fff;
+    }
+    .table-meta { font-size: 12px; color: #888; margin-bottom: 12px; }
+    .table-scroll { overflow-x: auto; }
+  </style>
+</head>
+<body>
+  <div class="page-header">
+    <div>
+      <h1>🎯 TA-Enhanced Backtest — UOA Scored Signals</h1>
+      <p>3210-Guided · 2023–2025 · $400K Capital · $8K Risk/Trade · UOA Momentum Entry · TP1=1.4R · BE@1R</p>
+    </div>
+    <a href="/" class="back-btn">← Main Dashboard</a>
+  </div>
+
+  <!-- Score Comparison Table -->
+  <div class="section-card">
+    <h3>📊 Score Filter Comparison — How 3210 Parameters Improve Performance</h3>
+    <div class="table-scroll">
+      <table class="comparison-table">
+        <thead>
+          <tr>
+            <th>Score Filter</th><th>3210 Condition</th><th>Signals</th><th>Traded</th>
+            <th>Win Rate</th><th>Total P&L</th><th>Avg R:R</th>
+            <th>Winners</th><th>Losers</th><th>BE</th><th>Profit Factor</th>
+          </tr>
+        </thead>
+        <tbody id="ta-cmp-tbody"></tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- Performance Stats -->
+  <div class="section-card">
+    <h3 id="ta-perf-label">📈 TA Backtest Performance — All Signals</h3>
+    <div class="stat-row">
+      <div class="stat-card"><div class="val pos" id="s-pnl">—</div><div class="lbl">Total P&L</div></div>
+      <div class="stat-card"><div class="val" id="s-wr">—</div><div class="lbl">Win Rate</div></div>
+      <div class="stat-card"><div class="val" id="s-traded">—</div><div class="lbl">Traded</div></div>
+      <div class="stat-card"><div class="val pos" id="s-wins">—</div><div class="lbl">Winners</div></div>
+      <div class="stat-card"><div class="val neg" id="s-losses">—</div><div class="lbl">Losers (SL)</div></div>
+      <div class="stat-card"><div class="val" id="s-be">—</div><div class="lbl">Break Even</div></div>
+      <div class="stat-card"><div class="val" id="s-ne">—</div><div class="lbl">No Entry</div></div>
+      <div class="stat-card"><div class="val" id="s-rr">—</div><div class="lbl">Avg R:R</div></div>
+      <div class="stat-card"><div class="val" id="s-dur">—</div><div class="lbl">Avg Duration</div></div>
+      <div class="stat-card"><div class="val pos" id="s-best">—</div><div class="lbl">Best Trade</div></div>
+      <div class="stat-card"><div class="val neg" id="s-worst">—</div><div class="lbl">Worst Trade</div></div>
+      <div class="stat-card"><div class="val" id="s-pf">—</div><div class="lbl">Profit Factor</div></div>
+    </div>
+  </div>
+
+  <!-- Year Breakdown -->
+  <div class="section-card">
+    <h3>📅 Per-Year Breakdown</h3>
+    <div class="year-cards" id="ta-year-cards"></div>
+  </div>
+
+  <!-- Charts -->
+  <div class="charts-row">
+    <div class="chart-box"><h4>📊 P&L by Year ($)</h4><canvas id="ta-chart-yr-pnl" height="180"></canvas></div>
+    <div class="chart-box"><h4>🎯 Win Rate by Year (%)</h4><canvas id="ta-chart-yr-wr" height="180"></canvas></div>
+    <div class="chart-box"><h4>🍩 Trade Outcome Distribution</h4><canvas id="ta-chart-donut" height="180"></canvas></div>
+    <div class="chart-box"><h4>📈 Win Rate by Score Tier</h4><canvas id="ta-chart-score" height="180"></canvas></div>
+  </div>
+
+  <!-- Individual Trades Table -->
+  <div class="section-card">
+    <h3>📋 TA Individual Trades</h3>
+    <div class="outcome-tabs">
+      <button class="outcome-tab active" data-outcome="all">All <span id="ot-all">—</span></button>
+      <button class="outcome-tab" data-outcome="wins">✅ Wins <span id="ot-wins">—</span></button>
+      <button class="outcome-tab" data-outcome="sl">❌ SL <span id="ot-sl">—</span></button>
+      <button class="outcome-tab" data-outcome="noentry">— No Entry <span id="ot-ne">—</span></button>
+    </div>
+    <div class="table-meta" id="ta-tmeta"></div>
+    <div class="table-scroll">
+      <table class="trade-table">
+        <thead>
+          <tr>
+            <th>Date</th><th>Ticker</th><th>Score</th><th>Entry $</th><th>SL $</th>
+            <th>TP1 $</th><th>Exit $</th><th>P&L</th><th>R:R</th><th>Days</th>
+            <th>Outcome</th><th>Z-Score</th><th>Call%</th><th>LIT</th>
+          </tr>
+        </thead>
+        <tbody id="ta-tbody"></tbody>
+      </table>
+    </div>
+  </div>
+
+  <div id="no-data" style="display:none;text-align:center;padding:60px;color:#888;font-size:15px;">
+    ⚠️ No TA results found. Go to the <a href="/" style="color:#4f8cff;">Main Dashboard</a> and run the TA Backtest first.
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+  <script>
+    let allTrades = [];
+    let currentOutcome = 'all';
+    const charts = {};
+
+    // ── Fetch & render ──────────────────────────────────────────────────────
+    fetch('/api/ta-results').then(r => r.json()).then(d => {
+      if (!d.ok || !d.results) {
+        document.getElementById('no-data').style.display = 'block';
+        return;
+      }
+      const res = d.results;
+      allTrades = res.overall.trades || [];
+      renderComparison(res.overall.stats, allTrades);
+      renderStats(res.overall.stats);
+      renderYearCards(res.byYear);
+      renderCharts(res);
+      renderTrades(allTrades, 'all');
+      updateTabCounts(allTrades);
+    }).catch(() => { document.getElementById('no-data').style.display = 'block'; });
+
+    // ── Outcome tabs ────────────────────────────────────────────────────────
+    document.querySelectorAll('.outcome-tab').forEach(btn => {
+      btn.addEventListener('click', () => {
+        document.querySelectorAll('.outcome-tab').forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+        currentOutcome = btn.dataset.outcome;
+        renderTrades(allTrades, currentOutcome);
+      });
+    });
+
+    // ── Comparison table ────────────────────────────────────────────────────
+    function computeStats(trades) {
+      const skip = ['NO_ENTRY','NO_LEVELS','INVALID_LEVELS','NO_PRICE_DATA'];
+      const counted = trades.filter(t => !skip.includes(t.outcome));
+      const wins  = counted.filter(t => ['TP1+TP2','TP1+PARTIAL','OPEN_PROFIT'].includes(t.outcome));
+      const losses = counted.filter(t => t.outcome === 'SL');
+      const bes   = counted.filter(t => t.outcome === 'BE');
+      const totalPnl = counted.reduce((s,t) => s+(t.pnl||0), 0);
+      const gp = counted.filter(t=>t.pnl>0).reduce((s,t)=>s+t.pnl,0);
+      const gl = Math.abs(counted.filter(t=>t.pnl<0).reduce((s,t)=>s+t.pnl,0));
+      return {
+        total: trades.length, traded: counted.length,
+        wins: wins.length, losses: losses.length, bes: bes.length,
+        winRate: counted.length ? +(100*wins.length/counted.length).toFixed(1) : 0,
+        totalPnl, profitFactor: gl>0 ? +(gp/gl).toFixed(2) : gp>0 ? 999 : 0,
+        avgRR: counted.length ? +(counted.reduce((s,t)=>s+(t.rr||0),0)/counted.length).toFixed(2) : 0,
+        avgDur: counted.length ? +(counted.reduce((s,t)=>s+(t.durationDays||0),0)/counted.length).toFixed(1) : 0,
+        bestTrade: counted.length ? Math.max(...counted.map(t=>t.pnl||0)) : 0,
+        worstTrade: counted.length ? Math.min(...counted.map(t=>t.pnl||0)) : 0,
+        noEntry: trades.filter(t=>t.outcome==='NO_ENTRY').length,
+      };
+    }
+
+    function renderComparison(overallStats, trades) {
+      const tiers = [
+        { scoreMin: 0,  label: '📋 All Signals', condition: '—', cls: '' },
+        { scoreMin: 8,  label: '⭐ Score ≥ 8',  condition: 'BULLISH + SOS', cls: 'tier-s8' },
+        { scoreMin: 10, label: '🎯 Score ≥ 10', condition: 'BULLISH + SOS + AM Buy + POI', cls: 'tier-s10' },
+        { scoreMin: 12, label: '⚡ Score ≥ 12', condition: '+ FIB 0.50 (Fully 3210)', cls: 'tier-s12' },
+      ];
+      const tbody = document.getElementById('ta-cmp-tbody');
+      tbody.innerHTML = '';
+      for (const tier of tiers) {
+        const ft = trades.filter(t => !t.signal || (t.signal.score ?? 0) >= tier.scoreMin);
+        const s = computeStats(ft);
+        const wrCls = s.winRate >= 55 ? 'pos' : s.winRate >= 45 ? '' : 'neg';
+        const pnlCls = s.totalPnl >= 0 ? 'pos' : 'neg';
+        const pnlStr = s.totalPnl >= 0 ? `+$${Math.round(s.totalPnl).toLocaleString()}` : `-$${Math.abs(Math.round(s.totalPnl)).toLocaleString()}`;
+        const tr = document.createElement('tr');
+        if (tier.cls) tr.className = tier.cls;
+        tr.innerHTML = `
+          <td style="font-weight:700">${tier.label}</td>
+          <td style="color:#aaa;font-size:11px">${tier.condition}</td>
+          <td>${s.total}</td><td>${s.traded}</td>
+          <td class="${wrCls}" style="font-weight:700">${s.winRate}%</td>
+          <td class="${pnlCls}" style="font-weight:700">${pnlStr}</td>
+          <td>${s.avgRR}R</td>
+          <td class="pos">${s.wins}</td><td class="neg">${s.losses}</td><td>${s.bes}</td>
+          <td style="color:#ffd700;font-weight:700">${s.profitFactor}x</td>
+        `;
+        tbody.appendChild(tr);
+      }
+    }
+
+    // ── Stats cards ─────────────────────────────────────────────────────────
+    function renderStats(s) {
+      const fmt = (n, sign=true) => (sign&&n>0?'+$':n<0?'-$':'$') + Math.abs(Math.round(n)).toLocaleString();
+      document.getElementById('s-pnl').textContent    = fmt(s.totalPnl);
+      document.getElementById('s-wr').textContent     = s.winRate + '%';
+      document.getElementById('s-traded').textContent = s.tradesExecuted;
+      document.getElementById('s-wins').textContent   = s.winCount;
+      document.getElementById('s-losses').textContent = s.lossCount;
+      document.getElementById('s-be').textContent     = s.beCount;
+      document.getElementById('s-ne').textContent     = s.noEntryCount;
+      document.getElementById('s-rr').textContent     = '+' + s.avgRR + 'R';
+      document.getElementById('s-dur').textContent    = s.avgDurationDays?.toFixed(1) + 'd';
+      document.getElementById('s-best').textContent   = fmt(s.bestTrade);
+      document.getElementById('s-worst').textContent  = fmt(s.worstTrade);
+      document.getElementById('s-pf').textContent     = s.profitFactor;
+      if (s.winRate >= 55) document.getElementById('s-wr').className = 'val pos';
+      else if (s.winRate < 45) document.getElementById('s-wr').className = 'val neg';
+    }
+
+    // ── Year cards ───────────────────────────────────────────────────────────
+    function renderYearCards(byYear) {
+      const cont = document.getElementById('ta-year-cards');
+      cont.innerHTML = '';
+      for (const yr of ['2023','2024','2025']) {
+        const yd = byYear[yr];
+        if (!yd) continue;
+        const s = yd.stats;
+        const pnlCls = s.totalPnl >= 0 ? 'pos' : 'neg';
+        const pnlStr = s.totalPnl >= 0 ? `+$${Math.round(s.totalPnl).toLocaleString()}` : `-$${Math.abs(Math.round(s.totalPnl)).toLocaleString()}`;
+        const card = document.createElement('div');
+        card.className = 'year-card';
+        card.innerHTML = `
+          <div class="yr-title">📅 ${yr}</div>
+          <div class="yr-pnl ${pnlCls}">${pnlStr}</div>
+          <div class="yr-meta">
+            Win Rate: <strong style="color:${s.winRate>=55?'#4caf50':s.winRate>=45?'#ffb300':'#f44336'}">${s.winRate}%</strong>
+            &nbsp;(${s.winCount}W / ${s.lossCount}L)<br>
+            ${s.tradesExecuted} trades · Avg ${s.avgRR}R · Avg ${s.avgDurationDays?.toFixed(1)}d<br>
+            Profit Factor: <strong>${s.profitFactor}x</strong>
+          </div>
+        `;
+        cont.appendChild(card);
+      }
+    }
+
+    // ── Charts ───────────────────────────────────────────────────────────────
+    function renderCharts(res) {
+      const years = ['2023','2024','2025'];
+      const pnlData = years.map(y => Math.round(res.byYear[y]?.stats?.totalPnl || 0));
+      const wrData  = years.map(y => res.byYear[y]?.stats?.winRate || 0);
+      const gridColor = 'rgba(255,255,255,0.06)';
+      const tickColor = '#888';
+
+      if (charts.pnl) charts.pnl.destroy();
+      charts.pnl = new Chart(document.getElementById('ta-chart-yr-pnl'), {
+        type: 'bar',
+        data: { labels: years, datasets: [{ data: pnlData, backgroundColor: pnlData.map(v => v>=0?'rgba(76,175,80,0.7)':'rgba(244,67,54,0.7)'), borderRadius: 5 }] },
+        options: { plugins:{legend:{display:false}}, scales:{ x:{ticks:{color:tickColor},grid:{color:gridColor}}, y:{ticks:{color:tickColor,callback:v=>'$'+Math.round(v/1000)+'k'},grid:{color:gridColor}} } }
+      });
+
+      if (charts.wr) charts.wr.destroy();
+      charts.wr = new Chart(document.getElementById('ta-chart-yr-wr'), {
+        type: 'bar',
+        data: { labels: years, datasets: [{ data: wrData, backgroundColor: 'rgba(79,140,255,0.7)', borderRadius: 5 }] },
+        options: { plugins:{legend:{display:false}}, scales:{ x:{ticks:{color:tickColor},grid:{color:gridColor}}, y:{min:0,max:100,ticks:{color:tickColor,callback:v=>v+'%'},grid:{color:gridColor}} } }
+      });
+
+      const trades = res.overall.trades;
+      const outcomeCounts = {};
+      trades.forEach(t => outcomeCounts[t.outcome] = (outcomeCounts[t.outcome]||0)+1);
+      const OMAP = {'TP1+TP2':'✅ TP1+TP2 Win','SL':'❌ Stop Loss','NO_ENTRY':'— No Entry','TP1+PARTIAL':'📈 TP1+Open','OPEN_PROFIT':'⏳ Open+','BE':'➖ Break Even','NO_PRICE_DATA':'⚠️ No Data','NO_LEVELS':'⚠️ No Levels','OPEN_LOSS':'⏳ Open–','INVALID_LEVELS':'⚠️ Invalid'};
+      const OCOL  = {'TP1+TP2':'#4caf50','SL':'#f44336','NO_ENTRY':'#555','TP1+PARTIAL':'#8bc34a','OPEN_PROFIT':'#00bcd4','BE':'#888','NO_PRICE_DATA':'#ff9800','NO_LEVELS':'#ff9800','OPEN_LOSS':'#e91e63','INVALID_LEVELS':'#9c27b0'};
+      if (charts.donut) charts.donut.destroy();
+      const okLabels = Object.keys(outcomeCounts).filter(k => outcomeCounts[k] > 0);
+      charts.donut = new Chart(document.getElementById('ta-chart-donut'), {
+        type: 'doughnut',
+        data: { labels: okLabels.map(k=>OMAP[k]||k), datasets:[{ data: okLabels.map(k=>outcomeCounts[k]), backgroundColor: okLabels.map(k=>OCOL[k]||'#666') }] },
+        options: { cutout:'65%', plugins:{ legend:{ position:'right', labels:{ color:'#ccc', font:{size:10} } } } }
+      });
+
+      const tiers=[0,8,10,12]; const tLbls=['All','≥8','≥10','≥12'];
+      const wrByScore = tiers.map(sc => {
+        const ft = trades.filter(t => !t.signal || (t.signal.score??0) >= sc);
+        return ft.length ? computeStats(ft).winRate : 0;
+      });
+      if (charts.score) charts.score.destroy();
+      charts.score = new Chart(document.getElementById('ta-chart-score'), {
+        type: 'bar',
+        data: { labels: tLbls, datasets:[{ label:'Win Rate %', data: wrByScore, backgroundColor: ['rgba(100,100,100,0.6)','rgba(76,175,80,0.7)','rgba(0,212,168,0.7)','rgba(255,152,0,0.7)'], borderRadius: 5 }] },
+        options: { plugins:{legend:{display:false}}, scales:{ x:{ticks:{color:tickColor},grid:{color:gridColor}}, y:{min:0,max:100,ticks:{color:tickColor,callback:v=>v+'%'},grid:{color:gridColor}} } }
+      });
+    }
+
+    // ── Trade table with year separators ────────────────────────────────────
+    function updateTabCounts(trades) {
+      const wins = trades.filter(t => ['TP1+TP2','TP1+PARTIAL','OPEN_PROFIT'].includes(t.outcome));
+      const sl   = trades.filter(t => t.outcome === 'SL');
+      const ne   = trades.filter(t => t.outcome === 'NO_ENTRY');
+      document.getElementById('ot-all').textContent  = trades.length;
+      document.getElementById('ot-wins').textContent = wins.length;
+      document.getElementById('ot-sl').textContent   = sl.length;
+      document.getElementById('ot-ne').textContent   = ne.length;
+    }
+
+    function renderTrades(trades, filter) {
+      let filtered;
+      switch(filter) {
+        case 'wins':    filtered = trades.filter(t => ['TP1+TP2','TP1+PARTIAL','OPEN_PROFIT'].includes(t.outcome)); break;
+        case 'sl':      filtered = trades.filter(t => t.outcome === 'SL'); break;
+        case 'noentry': filtered = trades.filter(t => t.outcome === 'NO_ENTRY'); break;
+        default:        filtered = [...trades]; break;
+      }
+      filtered.sort((a,b) => (a.signal?.date||'').localeCompare(b.signal?.date||''));
+
+      const skip = ['NO_ENTRY','NO_LEVELS','INVALID_LEVELS','NO_PRICE_DATA'];
+      const exe  = filtered.filter(t => !skip.includes(t.outcome));
+      const totPnl = exe.reduce((s,t) => s+(t.pnl||0), 0);
+      document.getElementById('ta-tmeta').textContent =
+        `${filtered.length} trades · P&L: ${totPnl>=0?'+':''}$${Math.round(totPnl).toLocaleString()}`;
+
+      const tbody = document.getElementById('ta-tbody');
+      tbody.innerHTML = '';
+
+      const WIN = ['TP1+TP2','TP1+PARTIAL','OPEN_PROFIT'];
+      const OLABEL = {'TP1+TP2':'✅ TP1+TP2','TP1+PARTIAL':'📈 TP1+Open','OPEN_PROFIT':'⏳ Open+','BE':'➖ Break Even','SL':'❌ Stop Loss','NO_ENTRY':'— No Entry','OPEN_LOSS':'⏳ Open–','NO_PRICE_DATA':'⚠️ No Data','NO_LEVELS':'⚠️ No Levels'};
+
+      // Group by year
+      const byYear = {};
+      for (const t of filtered) {
+        const yr = String(t.signal?.year || t.signal?.date?.slice(0,4) || 'Unknown');
+        if (!byYear[yr]) byYear[yr] = [];
+        byYear[yr].push(t);
+      }
+
+      for (const yr of Object.keys(byYear).sort()) {
+        const yrTrades = byYear[yr];
+        const yrExe  = yrTrades.filter(t => !skip.includes(t.outcome));
+        const yrWins = yrExe.filter(t => WIN.includes(t.outcome));
+        const yrPnl  = yrExe.reduce((s,t) => s+(t.pnl||0), 0);
+        const yrWR   = yrExe.length ? Math.round(100*yrWins.length/yrExe.length) : 0;
+        const yrPnlStr = (yrPnl>=0?'+$':'-$') + Math.abs(Math.round(yrPnl)).toLocaleString();
+        const yrPnlCol = yrPnl >= 0 ? '#4caf50' : '#f44336';
+
+        const sep = document.createElement('tr');
+        sep.className = 'year-sep';
+        sep.innerHTML = `<td colspan="14">
+          <span style="font-size:13px;font-weight:700;color:#4f8cff;letter-spacing:1px;">📅 ${yr}</span>
+          <span style="margin-left:14px;font-size:12px;color:#aaa;">
+            ${yrTrades.length} signals &nbsp;·&nbsp;
+            <span style="color:#ccc">${yrExe.length} traded</span> &nbsp;·&nbsp;
+            Win Rate: <strong style="color:${yrWR>=55?'#4caf50':yrWR>=45?'#ffb300':'#f44336'}">${yrWR}%</strong>
+            &nbsp;(${yrWins.length}W / ${yrExe.length-yrWins.length}L)
+            &nbsp;·&nbsp; P&L: <strong style="color:${yrPnlCol}">${yrPnlStr}</strong>
+          </span>
+        </td>`;
+        tbody.appendChild(sep);
+
+        for (const t of yrTrades) {
+          const s = t.signal || {};
+          const pnl = t.pnl || 0;
+          const pnlCls = pnl>0?'pos':pnl<0?'neg':'';
+          const pnlStr = pnl!==0 ? (pnl>0?'+$':'-$')+Math.abs(Math.round(pnl)).toLocaleString() : '—';
+          const oCls = WIN.includes(t.outcome)?'pill-win':t.outcome==='SL'?'pill-loss':t.outcome==='BE'?'pill-be':'pill-noentry';
+          const score = s.score ?? '—';
+          const sColor = score>=12?'#ff9800':score>=10?'#00d4a8':score>=8?'#4caf50':'#888';
+          const tr = document.createElement('tr');
+          tr.innerHTML = `
+            <td>${s.date||'—'}</td>
+            <td class="ticker-cell">${s.ticker||'—'}</td>
+            <td style="font-weight:700;color:${sColor}">${score}</td>
+            <td>${t.entryPrice?'$'+t.entryPrice.toFixed(2):'—'}</td>
+            <td>${t.slPrice?'$'+t.slPrice.toFixed(2):'—'}</td>
+            <td>${t.tp1Price?'$'+t.tp1Price.toFixed(2):'—'}</td>
+            <td>${t.exitPrice?'$'+t.exitPrice.toFixed(2):'—'}</td>
+            <td class="${pnlCls}" style="font-weight:600">${pnlStr}</td>
+            <td class="${pnl>0?'pos':pnl<0?'neg':''}">${t.rr?t.rr+'R':'—'}</td>
+            <td>${t.durationDays||'—'}</td>
+            <td><span class="outcome-pill ${oCls}">${OLABEL[t.outcome]||t.outcome}</span></td>
+            <td>${s.volZScore?.toFixed(1)??'—'}σ</td>
+            <td>${s.callPct?.toFixed(0)??'—'}%</td>
+            <td>${s.litScore??'—'}</td>
+          `;
+          tbody.appendChild(tr);
+        }
+      }
+
+      if (filtered.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="14" style="text-align:center;color:#666;padding:24px">No trades match this filter</td></tr>`;
+      }
+    }
+  </script>
+</body>
+</html>

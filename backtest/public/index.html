@@ -1,0 +1,389 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>UOA Backtest Dashboard</title>
+<link rel="stylesheet" href="style.css">
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+</head>
+<body>
+<div class="app">
+
+  <!-- HEADER -->
+  <header class="header">
+    <div class="header-left">
+      <span class="logo">📊</span>
+      <div>
+        <div class="header-title">UOA Backtest Dashboard</div>
+        <div class="header-sub">Unusual Options Activity · Fib 50% Entry · 1.4R TP1 · SPY 200MA + Dual MA Trend Filter · Z≥5 · Anomaly≥0.85 · LIT≥85 · Call≥70%</div>
+      </div>
+    </div>
+    <div class="header-right">
+      <div class="header-params">
+        <span>💰 $400K Capital</span>
+        <span>⚠️ 2% Risk = $8K</span>
+        <span>🎯 TP1 = 2R</span>
+        <span>🛡️ BE at 1R</span>
+        <span>⏱️ Max 6 Months</span>
+      </div>
+    </div>
+  </header>
+
+  <!-- CONTROLS -->
+  <div class="controls-bar">
+    <div class="ctrl-group">
+      <label>Mode</label>
+      <div class="btn-group">
+        <button class="btn-opt active" style="pointer-events:none">🟢 Bullish (Long Only)</button>
+      </div>
+    </div>
+    <div class="ctrl-group">
+      <label>Year</label>
+      <div class="btn-group" id="year-group">
+        <button class="btn-opt active" data-val="ALL">All</button>
+        <button class="btn-opt" data-val="2022">2022</button>
+        <button class="btn-opt" data-val="2023">2023</button>
+        <button class="btn-opt" data-val="2024">2024</button>
+        <button class="btn-opt" data-val="2025">2025</button>
+      </div>
+    </div>
+    <div class="ctrl-group">
+      <label>Filter</label>
+      <div class="btn-group">
+        <button class="btn-opt active" id="hp-toggle" data-val="true">⭐ High Priority Only</button>
+        <button class="btn-opt" id="all-toggle" data-val="false">📋 All Signals</button>
+      </div>
+    </div>
+    <div class="ctrl-group">
+      <button class="run-btn" id="run-btn">▶ Run Backtest</button>
+    </div>
+  </div>
+
+  <!-- PROGRESS -->
+  <div class="progress-bar" id="progress-bar" style="display:none">
+    <div class="progress-fill" id="progress-fill"></div>
+  </div>
+  <div class="log-panel" id="log-panel" style="display:none">
+    <div class="log-content" id="log-content"></div>
+  </div>
+
+  <!-- SIGNAL SUMMARY CARDS -->
+  <div class="section-title">📥 Signal Summary <span id="summary-year-label">(All Years)</span></div>
+  <div class="stat-grid" id="signal-summary">
+    <div class="stat-card"><div class="stat-icon">📋</div><div class="stat-val" id="sc-total">—</div><div class="stat-label">Total Signals</div></div>
+    <div class="stat-card"><div class="stat-icon">⭐</div><div class="stat-val" id="sc-hp">—</div><div class="stat-label">High Priority</div></div>
+    <div class="stat-card highlight"><div class="stat-icon">🟢</div><div class="stat-val" id="sc-bull">—</div><div class="stat-label">HP Long Signals</div></div>
+    <div class="stat-card"><div class="stat-icon">📅</div><div class="stat-val" id="sc-2022">—</div><div class="stat-label">2022</div></div>
+    <div class="stat-card"><div class="stat-icon">📅</div><div class="stat-val" id="sc-2023">—</div><div class="stat-label">2023</div></div>
+    <div class="stat-card"><div class="stat-icon">📅</div><div class="stat-val" id="sc-2024">—</div><div class="stat-label">2024</div></div>
+    <div class="stat-card"><div class="stat-icon">📅</div><div class="stat-val" id="sc-2025">—</div><div class="stat-label">2025</div></div>
+  </div>
+
+  <!-- RESULTS SECTION (hidden until backtest runs) -->
+  <div id="results-section" style="display:none">
+
+    <!-- PERFORMANCE CARDS -->
+    <div class="section-title">📈 Backtest Performance</div>
+    <div class="stat-grid perf-grid">
+      <div class="stat-card highlight"><div class="stat-icon">💰</div><div class="stat-val" id="r-pnl">—</div><div class="stat-label">Total P&amp;L</div></div>
+      <div class="stat-card highlight"><div class="stat-icon">🎯</div><div class="stat-val" id="r-winrate">—</div><div class="stat-label">Win Rate</div></div>
+      <div class="stat-card"><div class="stat-icon">📊</div><div class="stat-val" id="r-trades">—</div><div class="stat-label">Trades Executed</div></div>
+      <div class="stat-card"><div class="stat-icon">✅</div><div class="stat-val" id="r-wins">—</div><div class="stat-label">Winners</div></div>
+      <div class="stat-card"><div class="stat-icon">❌</div><div class="stat-val" id="r-losses">—</div><div class="stat-label">Losers (SL)</div></div>
+      <div class="stat-card"><div class="stat-icon">➖</div><div class="stat-val" id="r-be">—</div><div class="stat-label">Break Even</div></div>
+      <div class="stat-card"><div class="stat-icon">⏳</div><div class="stat-val" id="r-open">—</div><div class="stat-label">Open / Timeout</div></div>
+      <div class="stat-card"><div class="stat-icon">🚫</div><div class="stat-val" id="r-noentry">—</div><div class="stat-label">No Entry</div></div>
+      <div class="stat-card"><div class="stat-icon">📐</div><div class="stat-val" id="r-avgrr">—</div><div class="stat-label">Avg R:R</div></div>
+      <div class="stat-card"><div class="stat-icon">📆</div><div class="stat-val" id="r-avgdur">—</div><div class="stat-label">Avg Duration</div></div>
+      <div class="stat-card"><div class="stat-icon">📈</div><div class="stat-val" id="r-besttrade">—</div><div class="stat-label">Best Trade</div></div>
+      <div class="stat-card"><div class="stat-icon">📉</div><div class="stat-val" id="r-worsttrade">—</div><div class="stat-label">Worst Trade</div></div>
+    </div>
+
+    <!-- YEAR TABS -->
+    <div class="section-title">📅 Per-Year Breakdown</div>
+    <div class="year-tabs" id="year-tabs">
+      <button class="year-tab active" data-year="all">All Years</button>
+      <button class="year-tab" data-year="2022">2022</button>
+      <button class="year-tab" data-year="2023">2023</button>
+      <button class="year-tab" data-year="2024">2024</button>
+      <button class="year-tab" data-year="2025">2025</button>
+    </div>
+    <div class="year-stats-grid" id="year-stats-grid"></div>
+
+    <!-- CHARTS ROW -->
+    <div class="charts-row">
+      <div class="chart-box">
+        <div class="chart-title">📊 P&amp;L by Year ($)</div>
+        <canvas id="chart-pnl-year" height="180"></canvas>
+      </div>
+      <div class="chart-box">
+        <div class="chart-title">🎯 Win Rate by Year (%)</div>
+        <canvas id="chart-winrate-year" height="180"></canvas>
+      </div>
+      <div class="chart-box">
+        <div class="chart-title">🥧 Trade Outcome Distribution</div>
+        <canvas id="chart-outcomes" height="180"></canvas>
+      </div>
+      <div class="chart-box">
+        <div class="chart-title">📐 Average R:R by Year</div>
+        <canvas id="chart-rr-year" height="180"></canvas>
+      </div>
+    </div>
+
+    <!-- MONTHLY P&L CHART -->
+    <div class="chart-box full-width">
+      <div class="monthly-chart-header">
+        <div class="chart-title">📈 Monthly Cumulative P&amp;L ($)</div>
+        <div class="monthly-year-tabs" id="monthly-year-tabs">
+          <button class="myt-btn active" data-year="all">All Years</button>
+          <button class="myt-btn" data-year="2022">2022</button>
+          <button class="myt-btn" data-year="2023">2023</button>
+          <button class="myt-btn" data-year="2024">2024</button>
+          <button class="myt-btn" data-year="2025">2025</button>
+        </div>
+      </div>
+      <div class="monthly-stats-bar" id="monthly-stats-bar"></div>
+      <canvas id="chart-monthly-pnl" height="120"></canvas>
+    </div>
+
+    <!-- TRADE TABLE -->
+    <div class="section-title">
+      📋 Individual Trades
+      <span class="table-meta" id="table-meta"></span>
+      <input class="search-box" id="table-search" placeholder="🔍 Search ticker..." />
+    </div>
+    <div class="outcome-tabs" id="outcome-tabs">
+      <button class="outcome-tab active" data-outcome="all">
+        <span class="otab-icon">📋</span> All
+        <span class="otab-count" id="otab-count-all">—</span>
+      </button>
+      <button class="outcome-tab" data-outcome="wins">
+        <span class="otab-icon">✅</span> TP1+TP2
+        <span class="otab-count otab-green" id="otab-count-wins">—</span>
+      </button>
+      <button class="outcome-tab" data-outcome="sl">
+        <span class="otab-icon">❌</span> Stop Loss
+        <span class="otab-count otab-red" id="otab-count-sl">—</span>
+      </button>
+      <button class="outcome-tab" data-outcome="noentry">
+        <span class="otab-icon">🚫</span> No Entry
+        <span class="otab-count otab-gray" id="otab-count-noentry">—</span>
+      </button>
+      <button class="outcome-tab" data-outcome="others">
+        <span class="otab-icon">⚙️</span> Others
+        <span class="otab-count otab-yellow" id="otab-count-others">—</span>
+      </button>
+      <button class="outcome-tab year-collapse-toggle" id="year-collapse-toggle">
+        <span class="otab-icon">📅</span> Year
+        <span class="otab-count otab-gray" id="year-filter-label">All</span>
+        <span class="year-collapse-arrow" id="year-collapse-arrow">▾</span>
+      </button>
+    </div>
+
+    <!-- Collapsible year filter bar -->
+    <div class="year-filter-bar" id="year-filter-bar" style="display:none">
+      <span class="yflt-label">Filter by year:</span>
+      <button class="yflt-btn active" data-fyear="all">All Years</button>
+      <button class="yflt-btn" data-fyear="2022">2022</button>
+      <button class="yflt-btn" data-fyear="2023">2023</button>
+      <button class="yflt-btn" data-fyear="2024">2024</button>
+      <button class="yflt-btn" data-fyear="2025">2025</button>
+    </div>
+
+    <div class="table-wrap">
+      <table class="trade-table" id="trade-table">
+        <thead>
+          <tr>
+            <th>Date</th>
+            <th>Ticker</th>
+            <th>Cost Basis</th>
+            <th>Signal $</th>
+            <th>Entry $</th>
+            <th>SL $</th>
+            <th>TP1 $</th>
+            <th>Exit $</th>
+            <th>P&amp;L</th>
+            <th>R:R</th>
+            <th>Days</th>
+            <th>Outcome</th>
+            <th>Z-Score</th>
+            <th>Call%</th>
+            <th>LIT</th>
+          </tr>
+        </thead>
+        <tbody id="trade-tbody"></tbody>
+      </table>
+    </div>
+
+  </div><!-- /results-section -->
+
+  <!-- ═══════════════════════════════════════════════════════════
+       TA-ENHANCED BACKTEST SECTION
+       Uses 2023-2025 pre-scored UOA signals guided by 3210 parameters
+  ══════════════════════════════════════════════════════════════ -->
+  <div class="ta-divider">
+    <span class="ta-divider-label">🎯 TA-Enhanced Backtest · 3210 Guided · 2023–2025 Scored Signals</span>
+  </div>
+
+  <!-- TA CONTROLS -->
+  <div class="controls-bar ta-controls-bar">
+    <div class="ctrl-group">
+      <label>3210 Score Filter</label>
+      <div class="btn-group" id="ta-score-group">
+        <button class="btn-opt active" data-val="0">📋 All Signals</button>
+        <button class="btn-opt" data-val="8">⭐ Score ≥ 8</button>
+        <button class="btn-opt" data-val="10">🎯 Score ≥ 10</button>
+        <button class="btn-opt" data-val="12">⚡ Score ≥ 12</button>
+      </div>
+    </div>
+    <div class="ctrl-group">
+      <label>Year</label>
+      <div class="btn-group" id="ta-year-group">
+        <button class="btn-opt active" data-val="ALL">All</button>
+        <button class="btn-opt" data-val="2023">2023</button>
+        <button class="btn-opt" data-val="2024">2024</button>
+        <button class="btn-opt" data-val="2025">2025</button>
+      </div>
+    </div>
+    <div class="ctrl-group">
+      <button class="run-btn ta-run-btn" id="ta-run-btn">▶ Run TA Backtest</button>
+    </div>
+    <div class="ctrl-group" style="margin-left:auto; font-size:11px; color:#888; align-self:center; max-width:260px; line-height:1.4">
+      Score guides: ≥8 = BULLISH+SOS · ≥10 = +AM Buy+POI · ≥12 = +FIB 0.50 (3210 aligned)
+    </div>
+  </div>
+
+  <!-- TA PROGRESS -->
+  <div class="progress-bar" id="ta-progress-bar" style="display:none">
+    <div class="progress-fill" id="ta-progress-fill"></div>
+  </div>
+  <div class="log-panel" id="ta-log-panel" style="display:none">
+    <div class="log-content" id="ta-log-content"></div>
+  </div>
+
+  <!-- TA SIGNAL SUMMARY CARDS -->
+  <div class="section-title">📥 TA Signal Summary <span style="font-size:12px;font-weight:400;color:#888">(2023–2025 Scored Signals)</span></div>
+  <div class="stat-grid" id="ta-signal-summary">
+    <div class="stat-card"><div class="stat-icon">📋</div><div class="stat-val" id="ta-sc-total">—</div><div class="stat-label">Total Signals</div></div>
+    <div class="stat-card"><div class="stat-icon">⭐</div><div class="stat-val" id="ta-sc-s8">—</div><div class="stat-label">Score ≥ 8</div></div>
+    <div class="stat-card highlight"><div class="stat-icon">🎯</div><div class="stat-val" id="ta-sc-s10">—</div><div class="stat-label">Score ≥ 10</div></div>
+    <div class="stat-card"><div class="stat-icon">⚡</div><div class="stat-val" id="ta-sc-s12">—</div><div class="stat-label">Score ≥ 12</div></div>
+    <div class="stat-card"><div class="stat-icon">📅</div><div class="stat-val" id="ta-sc-2023">—</div><div class="stat-label">2023</div></div>
+    <div class="stat-card"><div class="stat-icon">📅</div><div class="stat-val" id="ta-sc-2024">—</div><div class="stat-label">2024</div></div>
+    <div class="stat-card"><div class="stat-icon">📅</div><div class="stat-val" id="ta-sc-2025">—</div><div class="stat-label">2025</div></div>
+  </div>
+
+  <!-- TA RESULTS (hidden until run) -->
+  <div id="ta-results-section" style="display:none">
+
+    <!-- SCORE COMPARISON TABLE -->
+    <div class="section-title">🔬 Score Filter Comparison <span style="font-size:12px;font-weight:400;color:#888">— How 3210 Parameters Improve Performance</span></div>
+    <div class="table-wrap">
+      <table class="trade-table comparison-table">
+        <thead>
+          <tr>
+            <th>Score Filter</th>
+            <th>3210 Condition</th>
+            <th>Signals</th>
+            <th>Traded</th>
+            <th style="color:#4caf50">Win Rate</th>
+            <th style="color:#4caf50">Total P&amp;L</th>
+            <th>Avg R:R</th>
+            <th>Winners</th>
+            <th>Losers</th>
+            <th>BE</th>
+            <th>Profit Factor</th>
+          </tr>
+        </thead>
+        <tbody id="ta-comparison-tbody"></tbody>
+      </table>
+    </div>
+
+    <!-- TA PERFORMANCE CARDS -->
+    <div class="section-title">📈 TA Backtest Performance <span id="ta-score-label" style="font-size:12px;font-weight:400;color:#00d4a8"></span></div>
+    <div class="stat-grid perf-grid">
+      <div class="stat-card highlight"><div class="stat-icon">💰</div><div class="stat-val" id="ta-r-pnl">—</div><div class="stat-label">Total P&amp;L</div></div>
+      <div class="stat-card highlight"><div class="stat-icon">🎯</div><div class="stat-val" id="ta-r-winrate">—</div><div class="stat-label">Win Rate</div></div>
+      <div class="stat-card"><div class="stat-icon">📊</div><div class="stat-val" id="ta-r-trades">—</div><div class="stat-label">Trades Executed</div></div>
+      <div class="stat-card"><div class="stat-icon">✅</div><div class="stat-val" id="ta-r-wins">—</div><div class="stat-label">Winners</div></div>
+      <div class="stat-card"><div class="stat-icon">❌</div><div class="stat-val" id="ta-r-losses">—</div><div class="stat-label">Losers (SL)</div></div>
+      <div class="stat-card"><div class="stat-icon">➖</div><div class="stat-val" id="ta-r-be">—</div><div class="stat-label">Break Even</div></div>
+      <div class="stat-card"><div class="stat-icon">🚫</div><div class="stat-val" id="ta-r-noentry">—</div><div class="stat-label">No Entry</div></div>
+      <div class="stat-card"><div class="stat-icon">📐</div><div class="stat-val" id="ta-r-avgrr">—</div><div class="stat-label">Avg R:R</div></div>
+      <div class="stat-card"><div class="stat-icon">📆</div><div class="stat-val" id="ta-r-avgdur">—</div><div class="stat-label">Avg Duration</div></div>
+      <div class="stat-card"><div class="stat-icon">📈</div><div class="stat-val" id="ta-r-besttrade">—</div><div class="stat-label">Best Trade</div></div>
+      <div class="stat-card"><div class="stat-icon">📉</div><div class="stat-val" id="ta-r-worsttrade">—</div><div class="stat-label">Worst Trade</div></div>
+      <div class="stat-card"><div class="stat-icon">⚖️</div><div class="stat-val" id="ta-r-pf">—</div><div class="stat-label">Profit Factor</div></div>
+    </div>
+
+    <!-- TA YEAR BREAKDOWN -->
+    <div class="section-title">📅 Per-Year Breakdown</div>
+    <div class="year-tabs" id="ta-year-tabs">
+      <button class="year-tab active" data-year="all">All Years</button>
+      <button class="year-tab" data-year="2023">2023</button>
+      <button class="year-tab" data-year="2024">2024</button>
+      <button class="year-tab" data-year="2025">2025</button>
+    </div>
+    <div class="year-stats-grid" id="ta-year-stats-grid"></div>
+
+    <!-- TA CHARTS -->
+    <div class="charts-row">
+      <div class="chart-box">
+        <div class="chart-title">📊 P&amp;L by Year ($)</div>
+        <canvas id="ta-chart-pnl-year" height="180"></canvas>
+      </div>
+      <div class="chart-box">
+        <div class="chart-title">🎯 Win Rate by Year (%)</div>
+        <canvas id="ta-chart-winrate-year" height="180"></canvas>
+      </div>
+      <div class="chart-box">
+        <div class="chart-title">🥧 Trade Outcome Distribution</div>
+        <canvas id="ta-chart-outcomes" height="180"></canvas>
+      </div>
+      <div class="chart-box">
+        <div class="chart-title">📐 Win Rate by Score</div>
+        <canvas id="ta-chart-score" height="180"></canvas>
+      </div>
+    </div>
+
+    <!-- TA TRADES TABLE -->
+    <div class="section-title">
+      📋 TA Individual Trades
+      <span class="table-meta" id="ta-table-meta"></span>
+    </div>
+    <div class="outcome-tabs" id="ta-outcome-tabs">
+      <button class="outcome-tab active" data-outcome="all">
+        <span class="otab-icon">📋</span> All <span class="otab-count" id="ta-otab-all">—</span>
+      </button>
+      <button class="outcome-tab" data-outcome="wins">
+        <span class="otab-icon">✅</span> TP1+TP2 <span class="otab-count otab-green" id="ta-otab-wins">—</span>
+      </button>
+      <button class="outcome-tab" data-outcome="sl">
+        <span class="otab-icon">❌</span> Stop Loss <span class="otab-count otab-red" id="ta-otab-sl">—</span>
+      </button>
+      <button class="outcome-tab" data-outcome="noentry">
+        <span class="otab-icon">🚫</span> No Entry <span class="otab-count otab-gray" id="ta-otab-noentry">—</span>
+      </button>
+    </div>
+    <div class="table-wrap">
+      <table class="trade-table" id="ta-trade-table">
+        <thead>
+          <tr>
+            <th>Date</th><th>Ticker</th><th>Score</th><th>Entry $</th>
+            <th>SL $</th><th>TP1 $</th><th>Exit $</th>
+            <th>P&amp;L</th><th>R:R</th><th>Days</th><th>Outcome</th>
+            <th>Z-Score</th><th>Call%</th><th>LIT</th>
+          </tr>
+        </thead>
+        <tbody id="ta-trade-tbody"></tbody>
+      </table>
+    </div>
+
+  </div><!-- /ta-results-section -->
+
+</div><!-- /app -->
+
+<script src="app.js"></script>
+</body>
+</html>

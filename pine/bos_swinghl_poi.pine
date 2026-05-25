@@ -1,0 +1,162 @@
+//@version=5
+indicator("BOS + Swing HL + POI", overlay=true, max_labels_count=500, max_lines_count=500, max_boxes_count=200)
+
+// ─── INPUTS ───────────────────────────────────────────────────────────────────
+swing_len    = input.int(10,   "Swing Length",         minval=3, maxval=50)
+show_fvg     = input.bool(true, "Show FVGs")
+show_ob      = input.bool(true, "Show Order Blocks")
+show_swing   = input.bool(true, "Show Swing Lines")
+show_table   = input.bool(true, "Show Info Table")
+ob_extend    = input.int(20,   "Extend OB/FVG Bars",  minval=5, maxval=200)
+
+// ─── COLORS ───────────────────────────────────────────────────────────────────
+c_bull       = color.new(color.green,  0)
+c_bear       = color.new(color.red,    0)
+c_bull_box   = color.new(color.green,  80)
+c_bear_box   = color.new(color.red,    80)
+c_fvg_bull   = color.new(color.aqua,   80)
+c_fvg_bear   = color.new(color.orange, 80)
+c_choch      = color.new(color.yellow, 0)
+c_swing_h    = color.new(color.red,    50)
+c_swing_l    = color.new(color.green,  50)
+
+// ─── SWING HIGH / LOW ─────────────────────────────────────────────────────────
+ph = ta.pivothigh(high, swing_len, swing_len)
+pl = ta.pivotlow(low,   swing_len, swing_len)
+
+var float last_sh     = na
+var int   last_sh_bar = na
+var float last_sl     = na
+var int   last_sl_bar = na
+var float prev_sh     = na
+var float prev_sl     = na
+
+// Draw swing high labels and lines
+if not na(ph)
+    prev_sh     := last_sh
+    last_sh     := ph
+    last_sh_bar := bar_index - swing_len
+    if show_swing
+        label.new(bar_index - swing_len, ph, "SH\n" + str.tostring(ph, "#.##"),
+             color=c_swing_h, textcolor=color.white, style=label.style_label_down, size=size.tiny)
+        line.new(bar_index - swing_len, ph, bar_index - swing_len + 40, ph,
+             color=c_swing_h, width=1, style=line.style_dashed)
+
+// Draw swing low labels and lines
+if not na(pl)
+    prev_sl     := last_sl
+    last_sl     := pl
+    last_sl_bar := bar_index - swing_len
+    if show_swing
+        label.new(bar_index - swing_len, pl, "SL\n" + str.tostring(pl, "#.##"),
+             color=c_swing_l, textcolor=color.white, style=label.style_label_up, size=size.tiny)
+        line.new(bar_index - swing_len, pl, bar_index - swing_len + 40, pl,
+             color=c_swing_l, width=1, style=line.style_dashed)
+
+// ─── BREAK OF STRUCTURE ───────────────────────────────────────────────────────
+var string last_bos   = "none"   // "bull" or "bear"
+var string last_choch = "none"
+var float  bos_level  = na
+
+// Bullish BOS: close breaks above last confirmed swing high
+bull_bos = not na(last_sh) and close > last_sh and close[1] <= last_sh
+
+// Bearish BOS: close breaks below last confirmed swing low
+bear_bos = not na(last_sl) and close < last_sl and close[1] >= last_sl
+
+// CHoCH = BOS against prevailing structure
+is_choch_bull = bull_bos and last_bos == "bear"
+is_choch_bear = bear_bos and last_bos == "bull"
+
+if bull_bos
+    bos_level := last_sh
+    lbl_txt   = is_choch_bull ? "CHoCH ↑\n" + str.tostring(last_sh, "#.##") : "BOS ↑\n" + str.tostring(last_sh, "#.##")
+    lbl_col   = is_choch_bull ? c_choch : c_bull
+    label.new(bar_index, last_sh, lbl_txt, color=lbl_col, textcolor=color.black, style=label.style_label_down, size=size.small)
+    line.new(bar_index - 1, last_sh, bar_index + 30, last_sh, color=lbl_col, width=2, style=line.style_solid)
+    last_choch := is_choch_bull ? "bull" : last_choch
+    last_bos   := "bull"
+
+if bear_bos
+    bos_level := last_sl
+    lbl_txt   = is_choch_bear ? "CHoCH ↓\n" + str.tostring(last_sl, "#.##") : "BOS ↓\n" + str.tostring(last_sl, "#.##")
+    lbl_col   = is_choch_bear ? c_choch : c_bear
+    label.new(bar_index, last_sl, lbl_txt, color=lbl_col, textcolor=color.white, style=label.style_label_up, size=size.small)
+    line.new(bar_index - 1, last_sl, bar_index + 30, last_sl, color=lbl_col, width=2, style=line.style_solid)
+    last_choch := is_choch_bear ? "bear" : last_choch
+    last_bos   := "bear"
+
+// ─── ORDER BLOCKS ─────────────────────────────────────────────────────────────
+// Bullish OB: last bearish candle before a bullish BOS
+bull_ob_high = high[1]
+bull_ob_low  = low[1]
+
+// Bearish OB: last bullish candle before a bearish BOS
+bear_ob_high = high[1]
+bear_ob_low  = low[1]
+
+if show_ob and bull_bos and close[1] < open[1]
+    box.new(bar_index - 1, bull_ob_high, bar_index + ob_extend, bull_ob_low,
+         border_color=c_bull, bgcolor=c_bull_box, border_width=1)
+    label.new(bar_index - 1, bull_ob_low, "Bull OB", color=c_bull, textcolor=color.white, style=label.style_label_up, size=size.tiny)
+
+if show_ob and bear_bos and close[1] > open[1]
+    box.new(bar_index - 1, bear_ob_high, bar_index + ob_extend, bear_ob_low,
+         border_color=c_bear, bgcolor=c_bear_box, border_width=1)
+    label.new(bar_index - 1, bear_ob_high, "Bear OB", color=c_bear, textcolor=color.white, style=label.style_label_down, size=size.tiny)
+
+// ─── FAIR VALUE GAPS (FVG) ────────────────────────────────────────────────────
+// Bullish FVG: candle[0].low > candle[2].high (gap up)
+fvg_bull = show_fvg and low > high[2] and close[1] > open[1]
+// Bearish FVG: candle[0].high < candle[2].low (gap down)
+fvg_bear = show_fvg and high < low[2] and close[1] < open[1]
+
+if fvg_bull
+    box.new(bar_index - 2, low, bar_index + ob_extend, high[2],
+         border_color=color.aqua, bgcolor=c_fvg_bull, border_width=1)
+    label.new(bar_index - 1, math.avg(low, high[2]), "FVG ↑", color=color.aqua, textcolor=color.black, style=label.style_label_right, size=size.tiny)
+
+if fvg_bear
+    box.new(bar_index - 2, low[2], bar_index + ob_extend, high,
+         border_color=color.orange, bgcolor=c_fvg_bear, border_width=1)
+    label.new(bar_index - 1, math.avg(low[2], high), "FVG ↓", color=color.orange, textcolor=color.black, style=label.style_label_right, size=size.tiny)
+
+// ─── DISCOUNT / PREMIUM ZONES ─────────────────────────────────────────────────
+swing_range_high = not na(last_sh) ? last_sh : high
+swing_range_low  = not na(last_sl) ? last_sl : low
+equilibrium      = math.avg(swing_range_high, swing_range_low)
+in_discount      = close < equilibrium
+in_premium       = close > equilibrium
+
+// ─── INFO TABLE ───────────────────────────────────────────────────────────────
+var table t = table.new(position.top_right, 2, 10, border_color=color.gray, border_width=1, frame_color=color.gray, frame_width=1)
+
+if show_table and barstate.islast
+    bos_col   = last_bos == "bull" ? color.green : last_bos == "bear" ? color.red : color.gray
+    zone_txt  = in_discount ? "DISCOUNT — Look Long" : "PREMIUM — Look Short"
+    zone_col  = in_discount ? color.green : color.red
+    bias_txt  = last_bos == "bull" ? "BULLISH — Wait for POI" : last_bos == "bear" ? "BEARISH — Wait for POI" : "NO BIAS"
+    bias_col  = last_bos == "bull" ? color.green : last_bos == "bear" ? color.red : color.gray
+
+    table.cell(t, 0, 0, "SMC STRUCTURE",   text_color=color.white, bgcolor=color.navy, text_size=size.small)
+    table.cell(t, 1, 0, "VALUE",           text_color=color.white, bgcolor=color.navy, text_size=size.small)
+    table.cell(t, 0, 1, "Last BOS",        text_color=color.white, bgcolor=color.black, text_size=size.small)
+    table.cell(t, 1, 1, str.upper(last_bos), text_color=color.white, bgcolor=bos_col,  text_size=size.small)
+    table.cell(t, 0, 2, "Bias",            text_color=color.white, bgcolor=color.black, text_size=size.small)
+    table.cell(t, 1, 2, bias_txt,          text_color=color.white, bgcolor=bias_col,   text_size=size.small)
+    table.cell(t, 0, 3, "Zone",            text_color=color.white, bgcolor=color.black, text_size=size.small)
+    table.cell(t, 1, 3, zone_txt,          text_color=color.white, bgcolor=zone_col,   text_size=size.small)
+    table.cell(t, 0, 4, "Equilibrium",     text_color=color.white, bgcolor=color.black, text_size=size.small)
+    table.cell(t, 1, 4, str.tostring(equilibrium, "#.##"), text_color=color.white, bgcolor=color.gray, text_size=size.small)
+    table.cell(t, 0, 5, "Last SH",         text_color=color.white, bgcolor=color.black, text_size=size.small)
+    table.cell(t, 1, 5, na(last_sh) ? "—" : str.tostring(last_sh, "#.##"), text_color=color.white, bgcolor=color.maroon, text_size=size.small)
+    table.cell(t, 0, 6, "Last SL",         text_color=color.white, bgcolor=color.black, text_size=size.small)
+    table.cell(t, 1, 6, na(last_sl) ? "—" : str.tostring(last_sl, "#.##"), text_color=color.white, bgcolor=color.teal, text_size=size.small)
+    table.cell(t, 0, 7, "BOS Level",       text_color=color.white, bgcolor=color.black, text_size=size.small)
+    table.cell(t, 1, 7, na(bos_level) ? "—" : str.tostring(bos_level, "#.##"), text_color=color.white, bgcolor=bos_col, text_size=size.small)
+    table.cell(t, 0, 8, "CHoCH",           text_color=color.white, bgcolor=color.black, text_size=size.small)
+    table.cell(t, 1, 8, last_choch == "none" ? "None" : str.upper(last_choch) + " CHoCH", text_color=color.black, bgcolor=last_choch != "none" ? color.yellow : color.gray, text_size=size.small)
+    table.cell(t, 0, 9, "Entry Signal",    text_color=color.white, bgcolor=color.black, text_size=size.small)
+    entry_txt = last_bos == "bull" and in_discount ? "LOOK FOR LONG AT POI" : last_bos == "bear" and in_premium ? "LOOK FOR SHORT AT POI" : "WAIT"
+    entry_col = (last_bos == "bull" and in_discount) or (last_bos == "bear" and in_premium) ? color.green : color.gray
+    table.cell(t, 1, 9, entry_txt,         text_color=color.white, bgcolor=entry_col,  text_size=size.small)

@@ -1,65 +1,68 @@
 {
-  "watchlist": ["BTCUSDT"],
-  "default_timeframe": "1",
+  "strategy": "Break of Structure + Swing High/Low + POI",
+  "watchlist": ["BTCUSD", "ETHUSD", "SOLUSD"],
+  "default_timeframe": "240",
 
-  "strategy": {
-    "name": "10-Second Momentum Scalper",
-    "sources": [
-      "Price momentum — buy if last close > previous close (green candle)",
-      "RSI filter — only trade when RSI is not at an extreme (30–70 range)"
-    ],
-    "primary_timeframes": [
-      "1-minute (signal source)",
-      "10-second execution loop"
-    ]
+  "market_structure": {
+    "swing_high": "A candle high that is higher than N candles on both sides — marks potential resistance and BOS level",
+    "swing_low":  "A candle low that is lower than N candles on both sides — marks potential support and BOS level",
+    "bos_bullish": "Price closes ABOVE a confirmed swing high → structure shifts bullish, trend is up",
+    "bos_bearish": "Price closes BELOW a confirmed swing low → structure shifts bearish, trend is down",
+    "choch": "Change of Character — first BOS against the prevailing trend, signals potential reversal"
   },
 
-  "indicators": {
-    "rsi_14": "Momentum filter. Only trade when RSI is between 30–70 (avoid extremes).",
-    "price_momentum": "Compare last close vs previous close. Up = long signal. Down = short signal."
+  "poi_types": {
+    "order_block_bullish": "Last bearish candle (down close) before a bullish BOS — price likely returns to this zone to rebalance",
+    "order_block_bearish": "Last bullish candle (up close) before a bearish BOS — price likely returns to this zone to rebalance",
+    "fvg_bullish": "Fair Value Gap up: gap between candle[2] high and candle[0] low on an impulsive up move — unmitigated imbalance",
+    "fvg_bearish": "Fair Value Gap down: gap between candle[2] low and candle[0] high on an impulsive down move — unmitigated imbalance",
+    "premium_discount": "Discount zone = below 50% of the swing range (look for longs). Premium zone = above 50% (look for shorts)."
   },
 
   "bias_criteria": {
     "bullish": [
-      "Last 1-min candle closed higher than the one before it",
-      "RSI is between 30 and 70"
+      "Most recent BOS was bullish (closed above swing high)",
+      "Price is in a discount zone (below 50% of swing range)",
+      "Price is pulling back into a bullish POI (order block or FVG)",
+      "Higher highs and higher lows forming on current timeframe"
     ],
     "bearish": [
-      "Last 1-min candle closed lower than the one before it",
-      "RSI is between 30 and 70"
+      "Most recent BOS was bearish (closed below swing low)",
+      "Price is in a premium zone (above 50% of swing range)",
+      "Price is pulling back into a bearish POI (order block or FVG)",
+      "Lower highs and lower lows forming on current timeframe"
     ],
     "neutral": [
-      "RSI is above 70 (overbought — skip)",
-      "RSI is below 30 (oversold — skip)",
-      "Candle close change is less than 0.05% (chop — skip)"
+      "No confirmed BOS — range-bound between last swing high and swing low",
+      "Price is at the 50% equilibrium level",
+      "Conflicting structure on higher vs lower timeframe"
     ]
   },
 
-  "entry_rules": {
-    "long": [
-      "Last close > previous close by at least 0.05%",
-      "RSI between 30 and 70",
-      "Enter market buy immediately"
-    ],
-    "short": [
-      "Last close < previous close by at least 0.05%",
-      "RSI between 30 and 70",
-      "Enter market sell immediately"
-    ]
-  },
-
-  "exit_rules": [
-    "Exit automatically after 10 seconds (next loop tick closes previous position)",
-    "No manual exit management — pure time-based scalp"
+  "entry_rules": [
+    "Only trade in the direction of the most recent BOS",
+    "Wait for price to return to a POI (order block or FVG) after BOS",
+    "Confirm entry with a lower-timeframe BOS in the direction of the trade at the POI",
+    "Bullish entries: POI must be in discount zone (below 50% of range)",
+    "Bearish entries: POI must be in premium zone (above 50% of range)",
+    "Do not enter if POI has already been mitigated (price traded through it)"
   ],
 
   "risk_rules": [
-    "Fixed trade size: 1% of portfolio per trade",
-    "Maximum trade size: $3.00",
-    "Maximum 6 trades per 60-second run",
-    "No stop loss — exit is time-based at next tick",
-    "For demo purposes only — minimum BitGet order size may apply"
+    "Stop loss: below the order block low (bullish trade) or above the order block high (bearish trade)",
+    "R:R minimum 1:2 — target next swing high/low or liquidity pool",
+    "Maximum 2 open positions at once",
+    "If 2 losing trades in a row, stop for the day",
+    "Do not trade into a POI on the opposite side — wait for mitigation"
   ],
 
-  "notes": "Demo strategy for YouTube video. Runs 6 trades over 60 seconds, one every 10 seconds. Signal is simple price momentum on 1-min candles with RSI sanity check."
+  "pine_script_indicator": "BOS + Swing HL + POI",
+  "claude_reads_from_chart": [
+    "data_get_pine_labels → BOS labels (Bullish BOS / Bearish BOS / CHoCH) with price levels",
+    "data_get_pine_lines  → swing high and swing low lines across the chart",
+    "data_get_pine_boxes  → POI boxes: bullish/bearish order blocks and FVGs (mitigated vs active)",
+    "data_get_pine_tables → current structure bias, last BOS direction, active POIs, discount/premium zone"
+  ],
+
+  "notes": "SMC strategy: BOS confirms trend direction, POIs are the entry zones. Claude reads all drawn levels from the chart via MCP tools."
 }

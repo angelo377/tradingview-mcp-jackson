@@ -4,3 +4,34 @@ scripts/current.pine
 temp_*
 *.log
 discovery-log.json
+
+# ── Cache & generated price data ──────────────────────────────────────────────
+backtest/cache/
+backtest-compound/cache/
+backtest-score7/cache/
+
+# ── Backtest results (generated, large) ──────────────────────────────────────
+backtest/results.json
+backtest/ta_results.json
+backtest-compound/results.json
+backtest-score7/results.json
+backtest-score7/data/
+
+# ── TA output charts (binary images) ─────────────────────────────────────────
+ta_output/charts/
+ta_output/ta_results.json
+
+# ── Debug / scratch scripts ───────────────────────────────────────────────────
+scripts/debug_*.mjs
+scripts/debug_*.js
+scripts/tv_cycle*.js
+scripts/debug_ms*.js
+scripts/debug_poi*.js
+scripts/debug_sources*.mjs
+scripts/debug_timing*.mjs
+scripts/debug_visibility*.mjs
+
+# ── Scan/cache JSON blobs ─────────────────────────────────────────────────────
+scripts/cycle_cache.json
+scripts/earnings_cache.json
+scripts/scan_cache.json

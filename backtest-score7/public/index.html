@@ -1,0 +1,197 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Score 7+ Backtest Dashboard</title>
+<link rel="stylesheet" href="style.css">
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+</head>
+<body>
+<div class="app">
+
+  <!-- HEADER -->
+  <header class="header">
+    <div class="header-left">
+      <span class="logo">🎯</span>
+      <div>
+        <div class="header-title">Score 7+ Backtest Dashboard</div>
+        <div class="header-sub">Rubric Score ≥ 7 · Pre-Simulated Trades · 2% Risk = $8K/trade · $400K Capital · First 50 Tickers</div>
+      </div>
+    </div>
+    <div class="header-right">
+      <div class="header-params">
+        <span>💰 $400K Capital</span>
+        <span>⚠️ 2% Risk = $8K</span>
+        <span>🏷️ Score Band: 7+</span>
+        <span>📊 50 Tickers</span>
+      </div>
+    </div>
+  </header>
+
+  <!-- CONTROLS -->
+  <div class="controls-bar">
+    <div class="ctrl-group">
+      <label>Year</label>
+      <div class="btn-group" id="year-group">
+        <button class="btn-opt active" data-val="ALL">All</button>
+        <button class="btn-opt" data-val="2022">2022</button>
+        <button class="btn-opt" data-val="2023">2023</button>
+        <button class="btn-opt" data-val="2024">2024</button>
+        <button class="btn-opt" data-val="2025">2025</button>
+      </div>
+    </div>
+    <div class="ctrl-group">
+      <button class="run-btn" id="run-btn">▶ Run Backtest</button>
+    </div>
+  </div>
+
+  <!-- PROGRESS -->
+  <div class="progress-bar" id="progress-bar" style="display:none">
+    <div class="progress-fill" id="progress-fill"></div>
+  </div>
+  <div class="log-panel" id="log-panel" style="display:none">
+    <div class="log-content" id="log-content"></div>
+  </div>
+
+  <!-- SIGNAL SUMMARY -->
+  <div class="section-title">📥 Data Summary</div>
+  <div class="stat-grid" id="signal-summary">
+    <div class="stat-card"><div class="stat-icon">📋</div><div class="stat-val" id="sc-total">—</div><div class="stat-label">Total CSV Trades</div></div>
+    <div class="stat-card"><div class="stat-icon">🏷️</div><div class="stat-val" id="sc-tickers">—</div><div class="stat-label">Unique Tickers (CSV)</div></div>
+    <div class="stat-card highlight"><div class="stat-icon">🎯</div><div class="stat-val" id="sc-top50">—</div><div class="stat-label">Top 50 Ticker Trades</div></div>
+    <div class="stat-card"><div class="stat-icon">📅</div><div class="stat-val" id="sc-2022">—</div><div class="stat-label">2022</div></div>
+    <div class="stat-card"><div class="stat-icon">📅</div><div class="stat-val" id="sc-2023">—</div><div class="stat-label">2023</div></div>
+    <div class="stat-card"><div class="stat-icon">📅</div><div class="stat-val" id="sc-2024">—</div><div class="stat-label">2024</div></div>
+    <div class="stat-card"><div class="stat-icon">📅</div><div class="stat-val" id="sc-2025">—</div><div class="stat-label">2025</div></div>
+  </div>
+
+  <!-- RESULTS (hidden until backtest runs) -->
+  <div id="results-section" style="display:none">
+
+    <!-- PERFORMANCE CARDS -->
+    <div class="section-title">📈 Backtest Performance <span id="perf-year-label" style="font-weight:400;font-size:14px;color:#6b7280"></span></div>
+    <div class="stat-grid perf-grid">
+      <div class="stat-card highlight"><div class="stat-icon">💰</div><div class="stat-val" id="r-pnl">—</div><div class="stat-label">Total P&amp;L</div></div>
+      <div class="stat-card highlight"><div class="stat-icon">🎯</div><div class="stat-val" id="r-winrate">—</div><div class="stat-label">Win Rate</div></div>
+      <div class="stat-card"><div class="stat-icon">📊</div><div class="stat-val" id="r-trades">—</div><div class="stat-label">Trades Executed</div></div>
+      <div class="stat-card"><div class="stat-icon">✅</div><div class="stat-val" id="r-wins">—</div><div class="stat-label">Winners</div></div>
+      <div class="stat-card"><div class="stat-icon">❌</div><div class="stat-val" id="r-sl">—</div><div class="stat-label">Stop Loss Hits</div></div>
+      <div class="stat-card"><div class="stat-icon">📐</div><div class="stat-val" id="r-avgrr">—</div><div class="stat-label">Avg R:R</div></div>
+      <div class="stat-card"><div class="stat-icon">📆</div><div class="stat-val" id="r-avgdur">—</div><div class="stat-label">Avg Hold Days</div></div>
+      <div class="stat-card"><div class="stat-icon">📈</div><div class="stat-val" id="r-best">—</div><div class="stat-label">Best Trade</div></div>
+      <div class="stat-card"><div class="stat-icon">📉</div><div class="stat-val" id="r-worst">—</div><div class="stat-label">Worst Trade</div></div>
+      <div class="stat-card"><div class="stat-icon">⚖️</div><div class="stat-val" id="r-pf">—</div><div class="stat-label">Profit Factor</div></div>
+      <div class="stat-card"><div class="stat-icon">🔼</div><div class="stat-val" id="r-mfe">—</div><div class="stat-label">Avg MFE</div></div>
+      <div class="stat-card"><div class="stat-icon">🔽</div><div class="stat-val" id="r-mae">—</div><div class="stat-label">Avg MAE</div></div>
+    </div>
+
+    <!-- MILESTONE CARDS -->
+    <div class="section-title">🏆 Milestone Hit Rates</div>
+    <div class="stat-grid milestone-grid">
+      <div class="stat-card highlight"><div class="stat-icon">2️⃣</div><div class="stat-val" id="r-hit2x">—</div><div class="stat-label">Hit 2x Return</div></div>
+      <div class="stat-card highlight"><div class="stat-icon">3️⃣</div><div class="stat-val" id="r-hit3x">—</div><div class="stat-label">Hit 3x Return</div></div>
+      <div class="stat-card highlight"><div class="stat-icon">5️⃣</div><div class="stat-val" id="r-hit5x">—</div><div class="stat-label">Hit 5x Return</div></div>
+      <div class="stat-card"><div class="stat-icon">🌟</div><div class="stat-val" id="r-win3x">—</div><div class="stat-label">Closed 3x Wins</div></div>
+      <div class="stat-card"><div class="stat-icon">⭐</div><div class="stat-val" id="r-win2x">—</div><div class="stat-label">Closed 2x Wins</div></div>
+    </div>
+
+    <!-- FORWARD RETURN PROFILE -->
+    <div class="section-title">📡 Avg Forward Return Profile (% of stock price)</div>
+    <div class="fwd-bar" id="fwd-bar"></div>
+
+    <!-- YEAR TABS -->
+    <div class="section-title">📅 Per-Year Breakdown</div>
+    <div class="year-tabs" id="year-tabs">
+      <button class="year-tab active" data-year="all">All Years</button>
+      <button class="year-tab" data-year="2022">2022</button>
+      <button class="year-tab" data-year="2023">2023</button>
+      <button class="year-tab" data-year="2024">2024</button>
+      <button class="year-tab" data-year="2025">2025</button>
+    </div>
+    <div class="year-stats-grid" id="year-stats-grid"></div>
+
+    <!-- CHARTS -->
+    <div class="charts-row">
+      <div class="chart-box">
+        <div class="chart-title">💰 P&amp;L by Year ($)</div>
+        <canvas id="chart-pnl-year" height="180"></canvas>
+      </div>
+      <div class="chart-box">
+        <div class="chart-title">🎯 Win Rate by Year (%)</div>
+        <canvas id="chart-winrate-year" height="180"></canvas>
+      </div>
+      <div class="chart-box">
+        <div class="chart-title">🥧 Trade Outcomes</div>
+        <canvas id="chart-outcomes" height="180"></canvas>
+      </div>
+      <div class="chart-box">
+        <div class="chart-title">🏆 Milestone Hit Rates (%)</div>
+        <canvas id="chart-milestones" height="180"></canvas>
+      </div>
+    </div>
+
+    <!-- FORWARD RETURN CHART -->
+    <div class="chart-box full-width">
+      <div class="chart-title">📡 Avg Forward Return by Holding Period (%)</div>
+      <canvas id="chart-fwd-return" height="100"></canvas>
+    </div>
+
+    <!-- TRADE TABLE -->
+    <div class="section-title">
+      📋 Individual Trades
+      <span class="table-meta" id="table-meta"></span>
+      <input class="search-box" id="table-search" placeholder="🔍 Search ticker..." />
+    </div>
+
+    <!-- Outcome tabs -->
+    <div class="outcome-tabs" id="outcome-tabs">
+      <button class="outcome-tab active" data-outcome="all">
+        <span class="otab-icon">📋</span> All <span class="otab-count" id="otab-count-all">—</span>
+      </button>
+      <button class="outcome-tab" data-outcome="wins">
+        <span class="otab-icon">✅</span> Winners <span class="otab-count otab-green" id="otab-count-wins">—</span>
+      </button>
+      <button class="outcome-tab" data-outcome="sl">
+        <span class="otab-icon">❌</span> Stop Loss <span class="otab-count otab-red" id="otab-count-sl">—</span>
+      </button>
+      <button class="outcome-tab" data-outcome="milestone">
+        <span class="otab-icon">🏆</span> 2x / 3x Wins <span class="otab-count otab-yellow" id="otab-count-milestone">—</span>
+      </button>
+      <button class="outcome-tab" data-outcome="others">
+        <span class="otab-icon">⚙️</span> Others <span class="otab-count otab-gray" id="otab-count-others">—</span>
+      </button>
+    </div>
+
+    <div class="table-wrap">
+      <table class="trade-table" id="trade-table">
+        <thead>
+          <tr>
+            <th>Signal Date</th>
+            <th>Entry Date</th>
+            <th>Exit Date</th>
+            <th>Ticker</th>
+            <th>Entry $</th>
+            <th>Stop $</th>
+            <th>Exit $</th>
+            <th>P&amp;L</th>
+            <th>R:R</th>
+            <th>Days</th>
+            <th>Outcome</th>
+            <th>Score</th>
+            <th>LIT</th>
+            <th>Z-Score</th>
+            <th>MFE</th>
+            <th>MAE</th>
+            <th>Exit Reason</th>
+          </tr>
+        </thead>
+        <tbody id="trade-tbody"></tbody>
+      </table>
+    </div>
+
+  </div><!-- /results-section -->
+</div><!-- /app -->
+<script src="app.js"></script>
+</body>
+</html>
