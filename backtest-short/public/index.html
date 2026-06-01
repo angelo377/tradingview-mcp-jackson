@@ -1,0 +1,658 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Short Backtest Dashboard</title>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:#0e1117;color:#d1d4dc;font-family:'Trebuchet MS',sans-serif;font-size:13px;min-height:100vh}
+
+/* ── Header ── */
+.header{background:#131722;border-bottom:1px solid #2a2e39;padding:12px 20px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px}
+.header-left{display:flex;align-items:center;gap:12px}
+.header-icon{font-size:22px}
+.header-title{font-size:17px;font-weight:700;color:#fff}
+.header-desc{font-size:10px;color:#787b86;margin-top:2px}
+.badges{display:flex;gap:6px;flex-wrap:wrap}
+.badge{background:#1e2230;border:1px solid #2a2e39;border-radius:4px;padding:3px 9px;font-size:10px;font-weight:600;color:#9ba3af;white-space:nowrap}
+.badge.red{border-color:#ef535044;color:#ef5350}
+.badge.amber{border-color:#f59e0b44;color:#f59e0b}
+.badge.green{border-color:#26a69a44;color:#26a69a}
+.badge.blue{border-color:#60a5fa44;color:#60a5fa}
+
+/* ── Controls bar ── */
+.controls{background:#131722;border-bottom:1px solid #2a2e39;padding:10px 20px;display:flex;align-items:center;gap:16px;flex-wrap:wrap}
+.ctrl-label{font-size:10px;color:#787b86;font-weight:700;letter-spacing:.6px;text-transform:uppercase}
+.year-btns{display:flex;gap:4px}
+.year-btn{background:#1e2230;border:1px solid #2a2e39;border-radius:4px;color:#9ba3af;padding:4px 12px;font-size:11px;cursor:pointer;transition:all .15s}
+.year-btn:hover{border-color:#ef535066;color:#ef5350}
+.year-btn.active{background:#ef535018;border-color:#ef5350;color:#ef5350;font-weight:700}
+.run-btn{margin-left:auto;background:linear-gradient(135deg,#ef5350,#c62828);border:none;border-radius:6px;color:#fff;padding:7px 20px;font-size:12px;font-weight:700;cursor:pointer;display:flex;align-items:center;gap:6px;transition:opacity .2s}
+.run-btn:hover{opacity:.85}
+.run-btn:disabled{opacity:.4;cursor:not-allowed}
+
+/* ── Progress ── */
+.progress-bar{background:#131722;border-bottom:1px solid #2a2e39;padding:8px 20px;display:none;align-items:center;gap:12px}
+.progress-bar.visible{display:flex}
+.progress-track{flex:1;height:4px;background:#2a2e39;border-radius:2px;overflow:hidden}
+.progress-fill{height:100%;background:#ef5350;border-radius:2px;transition:width .3s;width:0}
+.progress-text{font-size:10px;color:#787b86;white-space:nowrap}
+
+/* ── Section ── */
+.section{padding:16px 20px 0}
+.section-title{font-size:10px;font-weight:700;letter-spacing:.8px;text-transform:uppercase;color:#787b86;margin-bottom:10px;display:flex;align-items:center;gap:6px}
+.section-title::before{content:'';display:inline-block;width:3px;height:12px;background:#ef5350;border-radius:2px}
+
+/* ── Cards row ── */
+.cards{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:14px}
+.card{background:#131722;border:1px solid #2a2e39;border-radius:8px;padding:14px 16px;flex:1;min-width:110px;max-width:180px;text-align:center;transition:border-color .2s}
+.card:hover{border-color:#ef535044}
+.card-val{font-size:22px;font-weight:700;margin-bottom:4px}
+.card-lbl{font-size:9px;color:#787b86;letter-spacing:.5px;text-transform:uppercase}
+.card.green .card-val{color:#26a69a}
+.card.red .card-val{color:#ef5350}
+.card.amber .card-val{color:#f59e0b}
+.card.blue .card-val{color:#60a5fa}
+.card.purple .card-val{color:#a78bfa}
+.card.white .card-val{color:#d1d4dc}
+.card.highlight{border-color:#ef535066;background:#ef535008}
+
+/* ── Tabs ── */
+.tabs{display:flex;gap:0;border-bottom:1px solid #2a2e39;padding:0 20px;margin-top:10px;background:#0e1117}
+.tab{padding:10px 20px;font-size:12px;font-weight:600;cursor:pointer;border-bottom:2px solid transparent;color:#787b86;transition:all .15s;white-space:nowrap}
+.tab:hover{color:#d1d4dc}
+.tab.active{border-bottom-color:#ef5350;color:#ef5350}
+
+/* ── Tab content ── */
+.tab-content{display:none}
+.tab-content.visible{display:block}
+
+/* ── Year cards ── */
+.year-cards{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:14px}
+.year-card{background:#131722;border:1px solid #2a2e39;border-radius:8px;padding:14px 16px;min-width:180px;flex:1}
+.year-card-title{font-size:13px;font-weight:700;color:#60a5fa;margin-bottom:8px}
+.year-card-pnl{font-size:17px;font-weight:700;margin-bottom:4px}
+.year-card-row{font-size:10px;color:#787b86;line-height:1.7}
+.year-card-row span{color:#9ba3af}
+
+/* ── Charts ── */
+.charts-row{display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;margin-bottom:16px}
+.chart-box{background:#131722;border:1px solid #2a2e39;border-radius:8px;padding:14px}
+.chart-title{font-size:10px;font-weight:700;color:#787b86;letter-spacing:.5px;text-transform:uppercase;margin-bottom:10px}
+.chart-box canvas{max-height:200px}
+
+/* ── Trades table ── */
+.table-wrap{background:#131722;border:1px solid #2a2e39;border-radius:8px;overflow:hidden;margin-bottom:20px}
+.table-filter{display:flex;gap:4px;padding:10px 12px;border-bottom:1px solid #2a2e39;flex-wrap:wrap}
+.filter-btn{background:#1e2230;border:1px solid #2a2e39;border-radius:4px;color:#787b86;padding:3px 10px;font-size:10px;cursor:pointer;transition:all .15s;font-weight:600}
+.filter-btn:hover{color:#d1d4dc}
+.filter-btn.active{background:#ef535018;border-color:#ef5350;color:#ef5350}
+.table-scroll{overflow-x:auto}
+table{width:100%;border-collapse:collapse;font-size:11px}
+thead tr{background:#1a1f2e}
+th{padding:8px 10px;text-align:left;font-size:9px;font-weight:700;letter-spacing:.5px;text-transform:uppercase;color:#4a4e5a;white-space:nowrap;border-bottom:1px solid #2a2e39}
+td{padding:7px 10px;border-bottom:1px solid #1e2230;white-space:nowrap}
+tr:hover td{background:rgba(239,83,80,.04)}
+.year-sep td{background:linear-gradient(90deg,#ef535018,#131722);color:#ef5350;font-weight:700;font-size:10px;padding:6px 12px;border-bottom:1px solid #ef535033;border-top:1px solid #ef535033}
+
+/* ── Outcome badges ── */
+.outcome{display:inline-block;padding:2px 7px;border-radius:3px;font-size:9px;font-weight:700;letter-spacing:.3px}
+.outcome.WIN_TP1,.outcome.WIN_TRAIL{background:#26a69a22;color:#26a69a;border:1px solid #26a69a44}
+.outcome.LOSS_SL{background:#ef535022;color:#ef5350;border:1px solid #ef535044}
+.outcome.BE{background:#60a5fa22;color:#60a5fa;border:1px solid #60a5fa44}
+.outcome.TIMEOUT,.outcome.OPEN{background:#78787822;color:#9ba3af;border:1px solid #78787844}
+.outcome.NO_ENTRY{background:#1e2230;color:#4a4e5a;border:1px solid #2a2e39}
+
+/* ── Structure badge ── */
+.struct-bull{color:#26a69a;font-weight:700;font-size:10px}
+.struct-bear{color:#ef5350;font-weight:700;font-size:10px}
+
+/* ── Empty state ── */
+.empty{text-align:center;padding:48px 20px;color:#4a4e5a}
+.empty-icon{font-size:36px;margin-bottom:12px}
+.empty-title{font-size:14px;font-weight:600;color:#787b86;margin-bottom:6px}
+.empty-sub{font-size:11px;line-height:1.6}
+.empty code{background:#1e2230;padding:2px 6px;border-radius:3px;color:#9ba3af;font-size:10px}
+
+/* ── CSV format box ── */
+.csv-hint{background:#131722;border:1px solid #2a2e39;border-radius:8px;padding:16px 20px;margin:12px 20px;font-size:11px}
+.csv-hint h4{color:#ef5350;font-size:12px;margin-bottom:8px}
+.csv-hint pre{background:#0e1117;border:1px solid #2a2e39;border-radius:4px;padding:10px;font-size:10px;color:#9ba3af;overflow-x:auto;line-height:1.6}
+.csv-hint p{color:#787b86;margin-top:8px;line-height:1.6}
+.csv-hint strong{color:#d1d4dc}
+
+/* pnl colour helpers */
+.pnl-pos{color:#26a69a;font-weight:600}
+.pnl-neg{color:#ef5350;font-weight:600}
+.pnl-zero{color:#787b86}
+</style>
+</head>
+<body>
+
+<!-- ── Header ────────────────────────────────────────────────────────────── -->
+<div class="header">
+  <div class="header-left">
+    <div class="header-icon">📉</div>
+    <div>
+      <div class="header-title">Short Backtest Dashboard</div>
+      <div class="header-desc">SOW Red Dot · Auto Metrics SELL · Fib 0.50–0.628 (HH→HL) · 1.4R TP · BE at TP1 · Trail after TP1</div>
+    </div>
+  </div>
+  <div class="badges">
+    <span class="badge amber">💰 $400K Capital</span>
+    <span class="badge red">⚠ 2% Risk = $8K</span>
+    <span class="badge green">🎯 TP1 = 1.4R</span>
+    <span class="badge blue">🛡 BE at TP1</span>
+    <span class="badge red">📏 SL above HH</span>
+  </div>
+</div>
+
+<!-- ── Controls ──────────────────────────────────────────────────────────── -->
+<div class="controls">
+  <span class="ctrl-label">Year:</span>
+  <div class="year-btns">
+    <button class="year-btn active" data-year="ALL">All</button>
+    <button class="year-btn" data-year="2022">2022</button>
+    <button class="year-btn" data-year="2023">2023</button>
+    <button class="year-btn" data-year="2024">2024</button>
+    <button class="year-btn" data-year="2025">2025</button>
+  </div>
+  <button class="run-btn" id="runBtn">▶ Run Backtest</button>
+</div>
+
+<!-- ── Progress ──────────────────────────────────────────────────────────── -->
+<div class="progress-bar" id="progressBar">
+  <div class="progress-track"><div class="progress-fill" id="progressFill"></div></div>
+  <div class="progress-text" id="progressText">Starting…</div>
+</div>
+
+<!-- ── Signal Summary ─────────────────────────────────────────────────────── -->
+<div class="section">
+  <div class="section-title">Signal Summary</div>
+  <div class="cards" id="summaryCards">
+    <div class="card white"><div class="card-val" id="sigTotal">—</div><div class="card-lbl">Total Signals</div></div>
+    <div class="card red"><div class="card-val" id="sigBull">—</div><div class="card-lbl">Bullish Structure</div></div>
+    <div class="card amber"><div class="card-val" id="sigBear">—</div><div class="card-lbl">Bearish Structure</div></div>
+    <div class="card purple"><div class="card-val" id="sigSow">—</div><div class="card-lbl">SOW Confirmed</div></div>
+    <div class="card blue"><div class="card-val" id="sigSell">—</div><div class="card-lbl">SELL Signal</div></div>
+  </div>
+</div>
+
+<!-- ── Tabs ───────────────────────────────────────────────────────────────── -->
+<div class="tabs">
+  <div class="tab active" data-tab="bullish" id="tabBullish">📉 SHORT in Bullish Structure</div>
+  <div class="tab" data-tab="bearish" id="tabBearish">📉 SHORT in Bearish Structure</div>
+</div>
+
+<!-- ══════════════════════════════════════════════════════════════════════════
+     TAB: BULLISH STRUCTURE
+══════════════════════════════════════════════════════════════════════════ -->
+<div id="content-bullish" class="tab-content visible">
+  <div class="section">
+    <div class="section-title">Backtest Performance — Shorting Bullish Structure (Counter-Trend)</div>
+    <div class="cards" id="perf-bull"></div>
+  </div>
+  <div class="section">
+    <div class="section-title">Per-Year Breakdown</div>
+    <div class="year-cards" id="years-bull"></div>
+  </div>
+  <div class="section">
+    <div class="charts-row">
+      <div class="chart-box"><div class="chart-title">📊 P&amp;L by Year ($)</div><canvas id="chart-pnl-bull"></canvas></div>
+      <div class="chart-box"><div class="chart-title">🎯 Win Rate by Year (%)</div><canvas id="chart-wr-bull"></canvas></div>
+      <div class="chart-box"><div class="chart-title">🍩 Outcome Distribution</div><canvas id="chart-donut-bull"></canvas></div>
+    </div>
+  </div>
+  <div class="section">
+    <div class="section-title">Individual Trades</div>
+    <div class="table-wrap">
+      <div class="table-filter" id="filter-bull"></div>
+      <div class="table-scroll"><div id="trades-bull"></div></div>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════════════════════════════════════
+     TAB: BEARISH STRUCTURE
+══════════════════════════════════════════════════════════════════════════ -->
+<div id="content-bearish" class="tab-content">
+  <div class="section">
+    <div class="section-title">Backtest Performance — Shorting Bearish Structure (With-Trend)</div>
+    <div class="cards" id="perf-bear"></div>
+  </div>
+  <div class="section">
+    <div class="section-title">Per-Year Breakdown</div>
+    <div class="year-cards" id="years-bear"></div>
+  </div>
+  <div class="section">
+    <div class="charts-row">
+      <div class="chart-box"><div class="chart-title">📊 P&amp;L by Year ($)</div><canvas id="chart-pnl-bear"></canvas></div>
+      <div class="chart-box"><div class="chart-title">🎯 Win Rate by Year (%)</div><canvas id="chart-wr-bear"></canvas></div>
+      <div class="chart-box"><div class="chart-title">🍩 Outcome Distribution</div><canvas id="chart-donut-bear"></canvas></div>
+    </div>
+  </div>
+  <div class="section">
+    <div class="section-title">Individual Trades</div>
+    <div class="table-wrap">
+      <div class="table-filter" id="filter-bear"></div>
+      <div class="table-scroll"><div id="trades-bear"></div></div>
+    </div>
+  </div>
+</div>
+
+<!-- ── CSV Format hint (shown when no signals) ─────────────────────────────── -->
+<div class="csv-hint" id="csvHint" style="display:none">
+  <h4>📋 How to add signals</h4>
+  <p>Add your short signals to <strong>backtest-short/signals/short_signals.csv</strong></p>
+  <pre>date,ticker,year,structure,sosSow,amSignal,hhPrice,hlPrice,notes
+2024-06-15,NVDA,2024,BULLISH,SOW,SELL,135.50,118.00,Fib retest at POI
+2024-09-03,AAPL,2024,BEARISH,SOW,SELL,228.00,196.00,BOS down confirmed
+2025-01-22,META,2025,BULLISH,SOW,SELL,638.00,578.00,Counter-trend at 0.50</pre>
+  <p>
+    <strong>structure</strong>: BULLISH (counter-trend short) or BEARISH (with-trend short)<br>
+    <strong>hhPrice</strong>: The Higher High price (top of fib range)<br>
+    <strong>hlPrice</strong>: The Higher Low price (bottom of fib range)<br>
+    Entry is simulated at the <strong>0.50 fib level</strong> = hlPrice + 0.50 × (hhPrice − hlPrice)<br>
+    Stop loss is placed <strong>0.2% above hhPrice</strong>
+  </p>
+</div>
+
+<script>
+// ════════════════════════════════════════════════════════════════════════════
+// State
+// ════════════════════════════════════════════════════════════════════════════
+let allTrades    = [];
+let activeYear   = 'ALL';
+let activeTab    = 'bullish';
+let activeFilter = { bullish: 'ALL', bearish: 'ALL' };
+let charts       = {};
+
+// ════════════════════════════════════════════════════════════════════════════
+// Boot
+// ════════════════════════════════════════════════════════════════════════════
+(async () => {
+  await loadSummary();
+  await loadResults();
+})();
+
+// ════════════════════════════════════════════════════════════════════════════
+// Fetch helpers
+// ════════════════════════════════════════════════════════════════════════════
+async function loadSummary() {
+  try {
+    const r = await fetch('/api/signals-summary').then(r => r.json());
+    if (!r.ok) return;
+    const s = r.summary;
+    document.getElementById('sigTotal').textContent = s.total;
+    document.getElementById('sigBull').textContent  = s.bullish;
+    document.getElementById('sigBear').textContent  = s.bearish;
+    document.getElementById('sigSow').textContent   = s.sowCount;
+    document.getElementById('sigSell').textContent  = s.sellCount;
+    if (s.total === 0) document.getElementById('csvHint').style.display = 'block';
+  } catch (e) { console.error(e); }
+}
+
+async function loadResults() {
+  try {
+    const r = await fetch('/api/results').then(r => r.json());
+    if (!r.ok) { renderEmpty(); return; }
+    allTrades = r.results.trades || [];
+    renderAll();
+  } catch (_) { renderEmpty(); }
+}
+
+// ════════════════════════════════════════════════════════════════════════════
+// Render
+// ════════════════════════════════════════════════════════════════════════════
+function renderAll() {
+  renderTab('bullish');
+  renderTab('bearish');
+}
+
+function renderTab(structure) {
+  const key    = structure === 'bullish' ? 'BULLISH' : 'BEARISH';
+  const trades = filterTrades(allTrades, key, activeYear);
+  const stats  = computeStats(trades);
+  const sfx    = structure === 'bullish' ? 'bull' : 'bear';
+
+  renderPerfCards(sfx, stats);
+  renderYearCards(sfx, trades);
+  renderCharts(sfx, trades);
+  renderFilter(sfx, structure);
+  renderTrades(sfx, trades, activeFilter[structure]);
+}
+
+function filterTrades(trades, structure, year) {
+  return trades.filter(t => {
+    if (t.structure !== structure) return false;
+    if (year !== 'ALL' && t.year !== year) return false;
+    return true;
+  });
+}
+
+function computeStats(trades) {
+  const exec   = trades.filter(t => t.outcome !== 'NO_ENTRY');
+  const wins   = exec.filter(t => t.pnl > 0);
+  const losses = exec.filter(t => t.outcome === 'LOSS_SL');
+  const be     = exec.filter(t => t.outcome === 'BE');
+  const noE    = trades.filter(t => t.outcome === 'NO_ENTRY');
+  const pnl    = exec.reduce((s, t) => s + (t.pnl || 0), 0);
+  const wr     = exec.length ? (wins.length / exec.length * 100) : 0;
+  const avgRR  = exec.length ? exec.reduce((s, t) => s + (t.rr || 0), 0) / exec.length : 0;
+  const avgDur = exec.length ? exec.reduce((s, t) => s + (t.barsHeld || 0), 0) / exec.length : 0;
+  const best   = exec.length ? Math.max(...exec.map(t => t.pnl)) : 0;
+  const worst  = exec.length ? Math.min(...exec.map(t => t.pnl)) : 0;
+  return { total: trades.length, executed: exec.length, wins: wins.length, losses: losses.length,
+           be: be.length, noEntry: noE.length, pnl, wr, avgRR, avgDur, best, worst };
+}
+
+// ─── Performance cards ────────────────────────────────────────────────────────
+function renderPerfCards(sfx, s) {
+  const fmt  = n => n >= 0 ? `+$${n.toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2})}`
+                           : `-$${Math.abs(n).toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2})}`;
+  const pnlC = s.pnl >= 0 ? 'green' : 'red';
+  const wrC  = s.wr  >= 50 ? 'green' : s.wr >= 40 ? 'amber' : 'red';
+
+  document.getElementById(`perf-${sfx}`).innerHTML = `
+    <div class="card ${pnlC} highlight"><div class="card-val">${fmt(s.pnl)}</div><div class="card-lbl">Total P&amp;L</div></div>
+    <div class="card ${wrC}"><div class="card-val">${s.wr.toFixed(1)}%</div><div class="card-lbl">Win Rate</div></div>
+    <div class="card white"><div class="card-val">${s.executed}</div><div class="card-lbl">Trades Executed</div></div>
+    <div class="card green"><div class="card-val">${s.wins}</div><div class="card-lbl">Winners</div></div>
+    <div class="card red"><div class="card-val">${s.losses}</div><div class="card-lbl">Losers (SL)</div></div>
+    <div class="card blue"><div class="card-val">${s.be}</div><div class="card-lbl">Break Even</div></div>
+    <div class="card white"><div class="card-val">${s.noEntry}</div><div class="card-lbl">No Entry</div></div>
+    <div class="card ${s.avgRR >= 0 ? 'green' : 'red'}"><div class="card-val">${s.avgRR >= 0 ? '+' : ''}${s.avgRR.toFixed(2)}R</div><div class="card-lbl">Avg R:R</div></div>
+    <div class="card amber"><div class="card-val">${s.avgDur.toFixed(1)}d</div><div class="card-lbl">Avg Duration</div></div>
+    <div class="card green"><div class="card-val">${s.best >= 0 ? '+' : ''}$${Math.abs(s.best).toLocaleString('en-US',{maximumFractionDigits:0})}</div><div class="card-lbl">Best Trade</div></div>
+    <div class="card red"><div class="card-val">-$${Math.abs(s.worst).toLocaleString('en-US',{maximumFractionDigits:0})}</div><div class="card-lbl">Worst Trade</div></div>
+  `;
+}
+
+// ─── Year cards ───────────────────────────────────────────────────────────────
+function renderYearCards(sfx, trades) {
+  const years = [...new Set(trades.map(t => t.year))].sort();
+  if (!years.length) { document.getElementById(`years-${sfx}`).innerHTML = '<div style="color:#4a4e5a;font-size:11px;padding:8px">No data</div>'; return; }
+
+  document.getElementById(`years-${sfx}`).innerHTML = years.map(yr => {
+    const yt   = trades.filter(t => t.year === yr);
+    const s    = computeStats(yt);
+    const pnlC = s.pnl >= 0 ? '#26a69a' : '#ef5350';
+    const fmt  = n => n >= 0 ? `+$${n.toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2})}`
+                             : `-$${Math.abs(n).toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2})}`;
+    const pf   = s.losses ? (s.wins * 1.4 / s.losses).toFixed(2) : '∞';
+    return `<div class="year-card">
+      <div class="year-card-title">📅 ${yr}</div>
+      <div class="year-card-pnl" style="color:${pnlC}">${fmt(s.pnl)}</div>
+      <div class="year-card-row">Win Rate: <span>${s.wr.toFixed(1)}%</span></div>
+      <div class="year-card-row">${s.executed} trades · <span>${s.wins}W ${s.losses}L ${s.be}BE</span></div>
+      <div class="year-card-row">Avg R:R: <span>${s.avgRR >= 0 ? '+' : ''}${s.avgRR.toFixed(2)}R</span> · Avg ${s.avgDur.toFixed(0)}d</div>
+      <div class="year-card-row">Profit Factor: <span>${pf}</span></div>
+    </div>`;
+  }).join('');
+}
+
+// ─── Charts ───────────────────────────────────────────────────────────────────
+const CHART_OPTS = {
+  responsive: true, maintainAspectRatio: true,
+  plugins: { legend: { display: false } },
+  scales: {
+    x: { ticks: { color: '#787b86', font: { size: 10 } }, grid: { color: '#2a2e39' } },
+    y: { ticks: { color: '#787b86', font: { size: 10 } }, grid: { color: '#2a2e39' } },
+  },
+};
+
+function renderCharts(sfx, trades) {
+  const years = [...new Set(trades.map(t => t.year))].sort();
+  if (!years.length) return;
+
+  const pnls = years.map(yr => computeStats(trades.filter(t => t.year === yr)).pnl);
+  const wrs  = years.map(yr => computeStats(trades.filter(t => t.year === yr)).wr);
+  const exec = trades.filter(t => t.outcome !== 'NO_ENTRY');
+  const outcomeCounts = {
+    Wins:  exec.filter(t => t.pnl > 0).length,
+    Losses: exec.filter(t => t.outcome === 'LOSS_SL').length,
+    BE:    exec.filter(t => t.outcome === 'BE').length,
+    Other: exec.filter(t => ['TIMEOUT','OPEN'].includes(t.outcome)).length,
+  };
+
+  // Destroy existing
+  ['pnl','wr','donut'].forEach(k => { const id = `chart-${k}-${sfx}`; if (charts[id]) { charts[id].destroy(); delete charts[id]; } });
+
+  const pnlCtx = document.getElementById(`chart-pnl-${sfx}`).getContext('2d');
+  charts[`chart-pnl-${sfx}`] = new Chart(pnlCtx, {
+    type: 'bar',
+    data: {
+      labels: years,
+      datasets: [{ data: pnls, backgroundColor: pnls.map(v => v >= 0 ? '#26a69a88' : '#ef535088'),
+        borderColor: pnls.map(v => v >= 0 ? '#26a69a' : '#ef5350'), borderWidth: 1, borderRadius: 3 }]
+    },
+    options: { ...CHART_OPTS }
+  });
+
+  const wrCtx = document.getElementById(`chart-wr-${sfx}`).getContext('2d');
+  charts[`chart-wr-${sfx}`] = new Chart(wrCtx, {
+    type: 'bar',
+    data: {
+      labels: years,
+      datasets: [{ data: wrs, backgroundColor: wrs.map(v => v >= 50 ? '#60a5fa88' : '#f59e0b88'),
+        borderColor: wrs.map(v => v >= 50 ? '#60a5fa' : '#f59e0b'), borderWidth: 1, borderRadius: 3 }]
+    },
+    options: { ...CHART_OPTS, scales: { ...CHART_OPTS.scales, y: { ...CHART_OPTS.scales.y, min: 0, max: 100 } } }
+  });
+
+  const donutCtx = document.getElementById(`chart-donut-${sfx}`).getContext('2d');
+  charts[`chart-donut-${sfx}`] = new Chart(donutCtx, {
+    type: 'doughnut',
+    data: {
+      labels: Object.keys(outcomeCounts),
+      datasets: [{ data: Object.values(outcomeCounts),
+        backgroundColor: ['#26a69a88','#ef535088','#60a5fa88','#78787888'],
+        borderColor:     ['#26a69a','#ef5350','#60a5fa','#787878'],
+        borderWidth: 1 }]
+    },
+    options: { responsive: true, maintainAspectRatio: true,
+      plugins: { legend: { position: 'bottom', labels: { color: '#787b86', font: { size: 9 }, padding: 8 } } } }
+  });
+}
+
+// ─── Filter buttons ───────────────────────────────────────────────────────────
+function renderFilter(sfx, structure) {
+  const outcomes = ['ALL','WIN_TP1','WIN_TRAIL','LOSS_SL','BE','TIMEOUT','NO_ENTRY'];
+  const labels   = { ALL:'All', WIN_TP1:'✅ Wins', WIN_TRAIL:'🏃 Trail Wins', LOSS_SL:'❌ Losses', BE:'〰 Break Even', TIMEOUT:'⏱ Timeout', NO_ENTRY:'⛔ No Entry' };
+  const cur      = activeFilter[structure];
+
+  document.getElementById(`filter-${sfx}`).innerHTML = outcomes.map(o =>
+    `<button class="filter-btn ${o === cur ? 'active' : ''}" onclick="setFilter('${structure}','${o}')">${labels[o]}</button>`
+  ).join('');
+}
+
+function setFilter(structure, outcome) {
+  activeFilter[structure] = outcome;
+  const sfx = structure === 'bullish' ? 'bull' : 'bear';
+  const key  = structure === 'bullish' ? 'BULLISH' : 'BEARISH';
+  const trades = filterTrades(allTrades, key, activeYear);
+  renderFilter(sfx, structure);
+  renderTrades(sfx, trades, outcome);
+}
+
+// ─── Trades table ─────────────────────────────────────────────────────────────
+function renderTrades(sfx, trades, outcomeFilter = 'ALL') {
+  const container = document.getElementById(`trades-${sfx}`);
+
+  let filtered = trades;
+  if (outcomeFilter !== 'ALL') {
+    filtered = trades.filter(t => {
+      if (outcomeFilter === 'WIN_TP1')   return t.pnl > 0 && t.outcome !== 'WIN_TRAIL';
+      if (outcomeFilter === 'WIN_TRAIL') return t.outcome === 'WIN_TRAIL';
+      return t.outcome === outcomeFilter;
+    });
+  }
+
+  if (!filtered.length) {
+    container.innerHTML = `<div class="empty"><div class="empty-icon">📭</div>
+      <div class="empty-title">No trades to display</div>
+      <div class="empty-sub">Try a different filter or run the backtest first.</div></div>`;
+    return;
+  }
+
+  // Group by year
+  const byYear = {};
+  filtered.forEach(t => { const y = t.year || t.signalDate?.slice(0,4) || '?'; if (!byYear[y]) byYear[y] = []; byYear[y].push(t); });
+
+  const fmtPnl = (n) => {
+    if (!n && n !== 0) return '<span class="pnl-zero">—</span>';
+    const s = `$${Math.abs(n).toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2})}`;
+    return n > 0 ? `<span class="pnl-pos">+${s}</span>` : n < 0 ? `<span class="pnl-neg">-${s}</span>` : `<span class="pnl-zero">${s}</span>`;
+  };
+  const fmtPrice = n => n != null ? `$${Number(n).toFixed(2)}` : '—';
+  const fmtRR = n => { if (!n && n !== 0) return '—'; return (n >= 0 ? '<span style="color:#26a69a">' : '<span style="color:#ef5350">') + (n >= 0 ? '+' : '') + n.toFixed(2) + 'R</span>'; };
+
+  let html = `<table>
+    <thead><tr>
+      <th>Date</th><th>Ticker</th><th>Structure</th>
+      <th>Entry</th><th>Exit</th><th>SL</th><th>Fib 50</th><th>Fib 618</th>
+      <th>Shares</th><th>P&amp;L</th><th>R:R</th><th>Duration</th>
+      <th>SOW</th><th>SELL</th><th>Outcome</th>
+    </tr></thead><tbody>`;
+
+  for (const yr of Object.keys(byYear).sort()) {
+    const yt = byYear[yr];
+    const ys = computeStats(yt);
+    const pnlStr = ys.pnl >= 0 ? `+$${ys.pnl.toFixed(0)}` : `-$${Math.abs(ys.pnl).toFixed(0)}`;
+    const pnlCol = ys.pnl >= 0 ? '#26a69a' : '#ef5350';
+    html += `<tr class="year-sep"><td colspan="15">
+      📅 ${yr} &nbsp;·&nbsp; ${yt.length} signals &nbsp;·&nbsp; ${ys.executed} traded &nbsp;·&nbsp;
+      Win Rate: ${ys.wr.toFixed(1)}% &nbsp;·&nbsp;
+      <span style="color:${pnlCol};font-weight:700">${pnlStr}</span>
+      &nbsp;·&nbsp; ${ys.wins}W / ${ys.losses}L / ${ys.be}BE
+    </td></tr>`;
+
+    for (const t of yt) {
+      const structClass = t.structure === 'BULLISH' ? 'struct-bull' : 'struct-bear';
+      const structLabel = t.structure === 'BULLISH' ? '🟢 Bullish' : '🔴 Bearish';
+      const sowBadge  = t.sosSow === 'SOW'   ? '<span style="color:#ef5350;font-weight:700">🔴 SOW</span>' : '<span style="color:#4a4e5a">—</span>';
+      const sellBadge = t.amSignal === 'SELL' ? '<span style="color:#ef5350;font-weight:700">🔴 SELL</span>' : '<span style="color:#4a4e5a">—</span>';
+      html += `<tr>
+        <td>${t.signalDate}</td>
+        <td style="font-weight:700;color:#d1d4dc">${t.ticker}</td>
+        <td class="${structClass}">${structLabel}</td>
+        <td>${fmtPrice(t.entry)}</td>
+        <td>${fmtPrice(t.exit)}</td>
+        <td style="color:#ef5350">${fmtPrice(t.slPrice)}</td>
+        <td style="color:#f59e0b">${fmtPrice(t.fib50)}</td>
+        <td style="color:#a78bfa">${fmtPrice(t.fib618)}</td>
+        <td style="color:#9ba3af">${t.shares || '—'}</td>
+        <td>${fmtPnl(t.pnl)}</td>
+        <td>${fmtRR(t.rr)}</td>
+        <td style="color:#9ba3af">${t.barsHeld ? t.barsHeld + 'd' : '—'}</td>
+        <td>${sowBadge}</td>
+        <td>${sellBadge}</td>
+        <td><span class="outcome ${t.outcome}">${t.outcome}</span></td>
+      </tr>`;
+    }
+  }
+
+  html += '</tbody></table>';
+  container.innerHTML = html;
+}
+
+// ─── Empty state ──────────────────────────────────────────────────────────────
+function renderEmpty() {
+  ['bull','bear'].forEach(sfx => {
+    const container = document.getElementById(`trades-${sfx}`);
+    if (container) container.innerHTML = `<div class="empty">
+      <div class="empty-icon">📭</div>
+      <div class="empty-title">No backtest results yet</div>
+      <div class="empty-sub">
+        Add signals to <code>backtest-short/signals/short_signals.csv</code><br>then click <strong>▶ Run Backtest</strong>
+      </div></div>`;
+    const perf = document.getElementById(`perf-${sfx}`);
+    if (perf) perf.innerHTML = '<div style="color:#4a4e5a;font-size:11px;padding:8px 0">No data — run backtest first</div>';
+    const years = document.getElementById(`years-${sfx}`);
+    if (years) years.innerHTML = '';
+  });
+}
+
+// ════════════════════════════════════════════════════════════════════════════
+// Run backtest (SSE)
+// ════════════════════════════════════════════════════════════════════════════
+document.getElementById('runBtn').addEventListener('click', () => {
+  const btn    = document.getElementById('runBtn');
+  const bar    = document.getElementById('progressBar');
+  const fill   = document.getElementById('progressFill');
+  const txt    = document.getElementById('progressText');
+
+  btn.disabled = true;
+  btn.textContent = '⏳ Running…';
+  bar.classList.add('visible');
+  fill.style.width = '0%';
+  txt.textContent  = 'Starting…';
+  document.getElementById('csvHint').style.display = 'none';
+
+  const url = `/api/run-backtest?year=${activeYear}`;
+  const es  = new EventSource(url);
+
+  es.onmessage = (e) => {
+    const d = JSON.parse(e.data);
+    if (d.type === 'progress' && d.total) {
+      const pct = Math.round(((d.done || 0) / d.total) * 100);
+      fill.style.width = pct + '%';
+      txt.textContent  = d.msg || `${d.done}/${d.total}`;
+    }
+    if (d.type === 'complete') {
+      es.close();
+      fill.style.width = '100%';
+      txt.textContent  = 'Complete ✅';
+      btn.disabled     = false;
+      btn.textContent  = '▶ Run Backtest';
+      allTrades        = d.results?.trades || [];
+      renderAll();
+      loadSummary();
+      setTimeout(() => { bar.classList.remove('visible'); fill.style.width = '0%'; }, 2000);
+    }
+    if (d.type === 'error') {
+      es.close();
+      txt.textContent = `Error: ${d.msg}`;
+      btn.disabled    = false;
+      btn.textContent = '▶ Run Backtest';
+    }
+    if (d.type === 'start') { txt.textContent = d.msg; }
+  };
+
+  es.onerror = () => {
+    es.close();
+    txt.textContent = 'Connection error';
+    btn.disabled    = false;
+    btn.textContent = '▶ Run Backtest';
+  };
+});
+
+// ════════════════════════════════════════════════════════════════════════════
+// Tab switching
+// ════════════════════════════════════════════════════════════════════════════
+document.querySelectorAll('.tab').forEach(tab => {
+  tab.addEventListener('click', () => {
+    activeTab = tab.dataset.tab;
+    document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+    document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('visible'));
+    tab.classList.add('active');
+    document.getElementById(`content-${activeTab}`).classList.add('visible');
+  });
+});
+
+// ════════════════════════════════════════════════════════════════════════════
+// Year filter
+// ════════════════════════════════════════════════════════════════════════════
+document.querySelectorAll('.year-btn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    activeYear = btn.dataset.year;
+    document.querySelectorAll('.year-btn').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    renderAll();
+  });
+});
+</script>
+</body>
+</html>

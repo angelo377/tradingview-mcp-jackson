@@ -38,6 +38,7 @@ const SCRIPTS = {
   tv_earnings:           join(ROOT, 'scripts', 'tv_earnings.js'),
   tv_panel:              join(ROOT, 'scripts', 'tv_panel.js'),
   tv_refresh_watchlist:  join(ROOT, 'scripts', 'tv_refresh_watchlist.js'),
+  scan_shorts:           join(ROOT, 'scripts', 'scan_shorts.mjs'),
 };
 
 // ── Cache files ───────────────────────────────────────────────────────────────

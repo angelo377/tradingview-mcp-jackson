@@ -1,0 +1,10 @@
+{
+  "name": "short-backtest",
+  "version": "1.0.0",
+  "description": "Short Position Backtest Dashboard — Fib 0.50-0.628 + SOW + SELL",
+  "type": "commonjs",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js"
+  }
+}
